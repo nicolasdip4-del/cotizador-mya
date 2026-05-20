@@ -1,0 +1,5 @@
+[build]
+  publish = "."
+  command = ""
+
+# Servimos index.html en la raiz, sin redirects raros

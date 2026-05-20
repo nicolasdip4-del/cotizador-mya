@@ -1,0 +1,2012 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cotizador M&A</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  :root{
+    --bg:#fafafa; --card:#fff; --ink:#171717; --ink-soft:#525252; --ink-mute:#a3a3a3;
+    --line:#ededed; --line-soft:#f5f5f5; --accent:#005CA9; --accent-soft:#eef5fb;
+    --orange:#EF8702; --orange-soft:#fff5e6;
+    --good:#16a34a; --warn:#d97706; --bad:#dc2626;
+    --radius:10px; --shadow:none;
+  }
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
+  button{font:inherit;color:inherit}
+
+  .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  aside{background:#171717;color:#e5e5e5;padding:18px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin-bottom:6px}
+  .brand img{width:32px;height:32px;border-radius:6px;background:#fff;padding:2px}
+  .brand small{display:block;font-weight:400;color:#a7b0c2;font-size:11px;margin-top:2px}
+  nav{margin-top:22px;display:flex;flex-direction:column;gap:2px}
+  nav button{background:transparent;border:0;color:#cbd2e1;text-align:left;padding:10px 12px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13.5px;width:100%}
+  nav button:hover{background:#262626;color:#fff}
+  nav button.active{background:#262626;color:#fff;box-shadow:inset 3px 0 0 var(--orange)}
+  nav .ico{width:18px;text-align:center;opacity:.85}
+  aside .meta{position:absolute;bottom:14px;left:14px;right:14px;font-size:11px;color:#7c8597;border-top:1px solid #1f2942;padding-top:10px}
+
+  main{padding:24px 28px 60px;min-width:0}
+  header.bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:12px;flex-wrap:wrap}
+  header.bar h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+  header.bar .pill{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12px;color:var(--ink-soft)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+  .card-hd{padding:14px 18px;border-bottom:1px solid var(--line-soft);font-weight:700;font-size:15px;color:var(--accent);letter-spacing:-.01em;text-align:center;background:#f9fafb;position:relative;border-radius:10px 10px 0 0}
+  .card-hd > button,.card-hd > span:has(button){position:absolute;right:14px;top:50%;transform:translateY(-50%);margin:0 !important}
+  .card-hd small{color:var(--ink-mute);font-weight:400;font-size:12.5px;text-transform:none;letter-spacing:normal;margin-left:6px}
+  .card-bd{padding:14px 16px}
+
+  .grid{display:grid;gap:16px}
+  .grid.kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:18px}
+  .grid.two{grid-template-columns:2fr 1fr}
+  .grid.two-equal{grid-template-columns:1fr 1fr}
+  .grid.three{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:1100px){.grid.two,.grid.two-equal{grid-template-columns:1fr}.grid.three{grid-template-columns:1fr 1fr}}
+  @media(max-width:720px){.app{grid-template-columns:1fr}aside{position:relative;height:auto}.grid.three{grid-template-columns:1fr}}
+
+  .kpi{padding:16px 18px}
+  .kpi .lbl{color:var(--ink-mute);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .kpi .val{font-size:26px;font-weight:700;letter-spacing:-.02em;margin-top:4px}
+  .kpi .val.small{font-size:20px}
+  .kpi .sub{color:var(--ink-soft);font-size:12px;margin-top:6px}
+  .kpi.warn{border-left:3px solid var(--warn)}
+  .kpi.bad{border-left:3px solid var(--bad)}
+  .kpi.good{border-left:3px solid var(--good)}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+  th{font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-mute);background:#fafbfd;position:sticky;top:0;z-index:1}
+  tbody tr:hover{background:#fbfcff}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+  .scroll{max-height:520px;overflow:auto;border-radius:8px}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
+  .badge.linea{background:#eaf0ff;color:#2c46d4}
+  .badge.warn{background:#fff5e1;color:#a3580c}
+  .badge.bad{background:#fde8e8;color:#b3261e}
+  .badge.good{background:#e6f6ed;color:#0a6a4a}
+  .badge.mute{background:#eef1f7;color:#5a6478}
+  .badge.orange{background:var(--orange-soft);color:var(--orange)}
+  .badge.blue{background:var(--accent-soft);color:var(--accent)}
+
+  input[type=text],input[type=number],input[type=tel],select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;color:inherit}
+  input:focus,select:focus,textarea:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,92,169,.15)}
+  label.lbl{font-size:12px;color:var(--ink-soft);font-weight:500;display:block;margin-bottom:5px}
+  .btn{padding:10px 14px;background:var(--accent);color:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:500}
+  .btn:hover{background:#004785}
+  .btn.orange{background:var(--orange)}
+  .btn.orange:hover{background:#d57500}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:#f3f5fb}
+  .btn.danger{background:#fff;color:var(--bad);border:1px solid #fbcfcf}
+  .btn.danger:hover{background:#fff5f5}
+  .btn.lg{padding:12px 18px;font-size:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+
+  .barchart{display:flex;flex-direction:column;gap:8px}
+  .bar-row{display:grid;grid-template-columns:160px 1fr 110px;gap:10px;align-items:center;font-size:12.5px}
+  .bar-row .name{color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar-row .track{height:14px;background:#eef1f7;border-radius:6px;position:relative;overflow:hidden}
+  .bar-row .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--orange));border-radius:6px}
+  .bar-row .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+
+  .donut{display:flex;align-items:center;gap:18px}
+  .donut svg{flex-shrink:0}
+  .donut ul{list-style:none;margin:0;padding:0;flex:1;font-size:13px}
+  .donut li{display:flex;align-items:center;gap:8px;padding:4px 0}
+  .donut li .sw{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+  .donut li .nm{flex:1;color:var(--ink-soft)}
+  .donut li .pc{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:500}
+
+  .stock-pill{display:inline-block;padding:1px 7px;border-radius:6px;font-size:11px;background:#eef1f7;color:var(--ink-soft)}
+  .stock-pill.zero{background:#fff5e1;color:#a3580c}
+  .stock-pill.neg{background:#fde8e8;color:#b3261e}
+
+  /* ==== Producto card (simulador) ==== */
+  .prod-card{padding:20px;background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:16px}
+  .prod-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+  .prod-cab .titulo{font-size:18px;font-weight:700;color:var(--ink);margin-bottom:4px}
+  .prod-cab .meta{display:flex;gap:8px;flex-wrap:wrap;color:var(--ink-mute);font-size:12.5px;align-items:center;margin-top:6px}
+  .prod-precio{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft)}
+  .prod-precio .lbl-big{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-mute)}
+  .prod-precio .val-big{font-size:34px;font-weight:800;color:var(--accent);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+
+  .pago-grupo{margin-top:16px}
+  .pago-grupo > .card-hd{background:#f8fafc;border-radius:8px 8px 0 0}
+  .pago-tabla{width:100%;font-size:13px}
+  .pago-tabla td{padding:8px 12px}
+  .pago-tabla .nombre{color:var(--ink)}
+  .pago-tabla .num{text-align:right;font-variant-numeric:tabular-nums}
+  .pago-tabla .total{font-weight:700;color:var(--accent)}
+  .pago-tabla .cuota{color:var(--orange);font-weight:600}
+  .pago-tabla tr:hover{background:#fafbfd}
+
+  .sugerencias{position:relative;margin-top:6px}
+  .sugerencias .item{padding:9px 12px;background:#fff;border:1px solid var(--line-soft);border-radius:8px;margin-bottom:5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px}
+  .sugerencias .item:hover{border-color:var(--accent);background:#f8fbff}
+  .sugerencias .item .det{flex:1;min-width:0}
+  .sugerencias .item .det b{display:block;font-size:13.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sugerencias .item .det small{color:var(--ink-mute);font-size:11.5px}
+
+  /* ==== WhatsApp ==== */
+  .wa-grid{display:grid;grid-template-columns:1fr 432px;gap:18px;align-items:flex-start}
+  @media(max-width:1100px){.wa-grid{grid-template-columns:1fr}}
+  .canvas-wrap{position:sticky;top:20px}
+  #waCanvas{max-width:100%;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);background:#fff}
+  .wa-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+  .wa-checks{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;padding:6px;border:1px solid var(--line-soft);border-radius:8px;background:#fafbfd}
+  .wa-check{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;font-size:13px;cursor:pointer}
+  .wa-check:has(input:checked){background:#fff;border:1px solid var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .filtro-cat{padding:6px 14px;background:#fff;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:13px;color:var(--ink-soft);font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:all .15s}
+  .filtro-cat:hover{background:#f5f5f5;border-color:var(--ink-mute)}
+  .filtro-cat.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .filtro-cat .badge-num{display:inline-block;min-width:18px;padding:0 6px;border-radius:999px;background:#f1f5f9;color:var(--ink-soft);font-size:11px;font-weight:600;text-align:center}
+  .filtro-cat.active .badge-num{background:rgba(255,255,255,.25);color:#fff}
+  .filtro-cat .badge-num.tildados{background:var(--orange);color:#fff}
+  .wa-check:hover{background:#fff}
+  .wa-check input{width:auto;margin:0}
+  .wa-check .num{margin-left:auto;color:var(--ink-mute);font-variant-numeric:tabular-nums;font-size:12px}
+
+  .empty{padding:40px;text-align:center;color:var(--ink-mute)}
+  .empty b{display:block;margin-bottom:6px;color:var(--ink-soft);font-size:15px}
+  .muted{color:var(--ink-mute)}
+  .hidden{display:none !important}
+  .price-cell{font-variant-numeric:tabular-nums}
+
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cdd5e3;border-radius:6px}
+  ::-webkit-scrollbar-thumb:hover{background:#a9b3c5}
+</style>
+</head>
+<body>
+
+<!-- ============== PASSWORD GATE (solo se activa si actualizar.py inyecto un hash) ============== -->
+<div id="cotGate" style="display:none;position:fixed;inset:0;background:#0f172a;color:#fff;z-index:99999;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:system-ui,sans-serif">
+  <div style="font-size:22px;font-weight:600">Cotizador M&amp;A</div>
+  <div style="opacity:.7;font-size:14px">Ingresa la clave para acceder</div>
+  <input id="cotGatePwd" type="password" autocomplete="current-password" style="font-size:16px;padding:10px 14px;border-radius:8px;border:0;width:260px;outline:0;color:#0f172a">
+  <button id="cotGateBtn" style="font-size:15px;padding:10px 24px;border-radius:8px;border:0;background:#3b82f6;color:#fff;cursor:pointer;font-weight:600">Entrar</button>
+  <div id="cotGateErr" style="color:#fca5a5;height:18px;font-size:13px"></div>
+</div>
+<script>
+(function(){
+  var HASH = '/*__PWD_HASH__*/';
+  if (!HASH || HASH.length < 8) return;  // sin password configurado, no mostramos gate
+  var SALT = 'mya-cot-salt-2026';
+  var gate = document.getElementById('cotGate');
+  if (sessionStorage.getItem('cotAuth') === HASH) { gate.remove(); return; }
+  gate.style.display = 'flex';
+  async function chequear(){
+    var pwd = document.getElementById('cotGatePwd').value || '';
+    var buf = new TextEncoder().encode(SALT + pwd);
+    var h = await crypto.subtle.digest('SHA-256', buf);
+    var hex = Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2,'0')).join('');
+    if (hex === HASH) {
+      sessionStorage.setItem('cotAuth', HASH);
+      gate.remove();
+    } else {
+      document.getElementById('cotGateErr').textContent = 'Clave incorrecta';
+      var p = document.getElementById('cotGatePwd'); p.value = ''; p.focus();
+    }
+  }
+  document.getElementById('cotGateBtn').addEventListener('click', chequear);
+  document.getElementById('cotGatePwd').addEventListener('keydown', function(e){ if (e.key === 'Enter') chequear(); });
+  setTimeout(function(){ document.getElementById('cotGatePwd').focus(); }, 100);
+})();
+</script>
+<!-- ============== /PASSWORD GATE ============== -->
+<div class="app">
+  <aside>
+    <div class="brand">
+      <img id="logoSidebar" alt="M&A">
+      <div>Cotizador<small id="origen"></small></div>
+    </div>
+    <nav id="nav">
+      <button data-view="buscador"><span class="ico">⌕</span> Buscador</button>
+      <button data-view="comparador"><span class="ico">↔</span> Comparador</button>
+      <button data-view="whatsapp" class="active"><span class="ico">📋</span> Cotización <span id="navCartBadge" class="hidden" style="margin-left:auto;background:var(--orange);color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700"></span></button>
+    </nav>
+    <div class="meta" id="meta"></div>
+  </aside>
+
+  <main>
+    <header class="bar">
+      <h1 id="title">Cotización</h1>
+      <div class="row">
+        <button type="button" class="pill" id="loadAccdbPill" style="font-weight:500;cursor:pointer;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-family:inherit;font-size:inherit" title="Cargar otra base .accdb sin regenerar">
+          📁 <span id="loadAccdbLabel">Cargar .accdb</span>
+        </button>
+        <input type="file" id="loadAccdbInput" accept=".accdb,.mdb" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+        <span class="pill">📅 <span id="fecha"></span></span>
+        <span class="pill">📦 <span id="totsku"></span> SKUs</span>
+      </div>
+    </header>
+
+    <!-- ============ BUSCADOR ============ -->
+    <section id="view-buscador" class="hidden">
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-bd">
+          <div class="row" style="align-items:flex-end">
+            <div style="flex:2;min-width:240px">
+              <label class="lbl">Buscar por código o descripción</label>
+              <input id="qInput" type="text" placeholder="ej. heladera, MT470, freezer..." autocomplete="off">
+            </div>
+            <div style="flex:1;min-width:180px">
+              <label class="lbl">Línea</label>
+              <select id="qLinea"><option value="">Todas</option></select>
+            </div>
+            <div style="flex:1;min-width:180px">
+              <label class="lbl">Solo con stock</label>
+              <select id="qStock"><option value="">Mostrar todos</option><option value="1">Sí</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Resultados <small id="qCount"></small></div>
+        <div class="card-bd scroll" id="qResults"></div>
+      </div>
+    </section>
+
+    <!-- ============ COMPARADOR ============ -->
+    <section id="view-comparador" class="hidden">
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-bd">
+          <div class="row">
+            <div style="flex:1;min-width:200px">
+              <label class="lbl">Lista A (referencia)</label>
+              <select id="cmpA"></select>
+            </div>
+            <div style="flex:1;min-width:200px">
+              <label class="lbl">Lista B (comparar)</label>
+              <select id="cmpB"></select>
+            </div>
+            <div style="flex:1;min-width:200px">
+              <label class="lbl">Filtrar (opcional)</label>
+              <input id="cmpQ" type="text" placeholder="código o descripción">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="grid three" style="margin-bottom:18px">
+        <div class="card kpi"><div class="lbl">Productos en común</div><div class="val small" id="cmpComunes">—</div></div>
+        <div class="card kpi"><div class="lbl">Ratio mediano A÷B</div><div class="val small" id="cmpMed">—</div></div>
+        <div class="card kpi"><div class="lbl">Mayor diferencia</div><div class="val small" id="cmpMax">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Comparativa producto a producto</div>
+        <div class="card-bd scroll" id="cmpResults"></div>
+      </div>
+    </section>
+
+    <!-- ============ WHATSAPP / COTIZACIÓN ============ -->
+    <section id="view-whatsapp">
+      <div class="wa-grid">
+        <div>
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd"><span style="color:var(--accent)">●</span> 1. Datos del vendedor</div>
+            <div class="card-bd">
+              <div class="row">
+                <div style="flex:1;min-width:160px">
+                  <label class="lbl">Lista de precio</label>
+                  <select id="waLista"></select>
+                </div>
+                <div style="flex:1;min-width:160px">
+                  <label class="lbl">Vendedor / Asesor</label>
+                  <input id="waVendedor" type="text" placeholder="Tu nombre">
+                </div>
+                <div style="flex:1;min-width:160px">
+                  <label class="lbl">Teléfono / WhatsApp</label>
+                  <input id="waTelefono" type="tel" placeholder="ej. 381 555 5555">
+                </div>
+                <div style="flex:1;min-width:160px">
+                  <label class="lbl">Sucursal</label>
+                  <input id="waSucursal" type="text" placeholder="ej. Tucumán Capital">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd"><span style="color:var(--orange)">●</span> 2. Datos del cliente <small>(opcional)</small></div>
+            <div class="card-bd">
+              <div class="row">
+                <div style="flex:1;min-width:160px">
+                  <label class="lbl">Nombre del cliente</label>
+                  <input id="waCliente" type="text" placeholder="Nombre del cliente">
+                </div>
+                <div style="flex:1;min-width:160px">
+                  <label class="lbl">DNI / CUIT / CUIL</label>
+                  <input id="waCuitCliente" type="text" placeholder="ej. 20-12345678-9">
+                </div>
+                <div style="flex:0 0 140px">
+                  <label class="lbl">% Descuento final</label>
+                  <input id="waDescuento" type="number" min="0" max="100" step="0.5" value="0" placeholder="0">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd">3. Productos en la cotización <small id="waProdCount">0 items</small>
+              <span style="display:flex;gap:6px;margin-left:auto">
+                <button class="btn ghost" id="waCargarCarpeta" title="Cargar carpeta con fotos (los archivos deben llamarse igual que el código del producto)" style="padding:6px 10px;font-size:12px">📁 Cargar fotos</button>
+                <button class="btn ghost" id="waLimpiarFotos" title="Borrar todas las fotos guardadas" style="padding:6px 10px;font-size:12px">🗑</button>
+              </span>
+            </div>
+            <input type="file" id="waCarpetaInput" webkitdirectory="" directory="" multiple accept="image/*" style="display:none">
+            <div class="card-bd">
+              <div class="row" style="align-items:flex-end">
+                <div style="flex:2;min-width:240px">
+                  <label class="lbl">Buscar producto</label>
+                  <input id="waQ" type="text" placeholder="código o descripción">
+                  <div class="sugerencias" id="waSugs"></div>
+                </div>
+                <div style="flex:0 0 100px">
+                  <label class="lbl">Cant.</label>
+                  <input id="waCantNuevo" type="number" min="1" value="1">
+                </div>
+                <div><button class="btn" id="waAgregar">+ Agregar</button></div>
+              </div>
+              <div id="waItems" style="margin-top:14px"></div>
+              <div id="waSubtotal" style="margin-top:14px"></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd">4. Promociones del mes <button class="btn ghost" id="waPromoNueva" style="padding:6px 12px;font-size:12.5px">+ Nueva promo</button></div>
+            <div class="card-bd">
+              <div id="waPromos"></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd">5. Planes a mostrar al cliente <small id="waCuentaPlanes"></small></div>
+            <div class="card-bd">
+              
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+                <div id="waPlanesFiltro" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+                <button class="btn ghost" id="waTildarVisibles" style="padding:6px 12px;font-size:12.5px" title="Tildar todos los planes que se ven en este filtro">✓ Tildar visibles</button>
+                <button class="btn ghost" id="waDestildarVisibles" style="padding:6px 12px;font-size:12.5px" title="Destildar los planes visibles">✗ Limpiar</button>
+              </div>
+              <div class="wa-checks" id="waPlanes"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-hd">6. Mensaje al pie (opcional)</div>
+            <div class="card-bd">
+              <input id="waPie" type="text" placeholder="ej. Stock sujeto a disponibilidad. Vigencia hasta fin de mes.">
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-wrap">
+          <div class="card-hd" style="background:transparent;border:0;padding:0 0 8px;font-weight:600">Vista previa</div>
+          <canvas id="waCanvas" width="1080" height="1620"></canvas>
+          <div class="wa-actions">
+            <button class="btn lg orange" id="waDescargar">⬇ Descargar imagen</button>
+            <button class="btn lg ghost" id="waCopiar">📋 Copiar al portapapeles</button>
+          </div>
+          <div id="waMsg" class="muted" style="font-size:12px;margin-top:8px"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+// Data URL completa del logo (con mime correcto según extensión); o vacío si no hay logo.
+const LOGO_DATAURL_RAW = "/*__LOGO_DATAURL__*/";
+// Bundle ESM de mdb-reader@3 embebido por actualizar.py (vacío si no se pudo descargar).
+const MDB_READER_SOURCE = /*__MDB_READER_SOURCE__*/"";
+
+/* ============== utilidades ============== */
+const $ = (s, p=document) => p.querySelector(s);
+const $$ = (s, p=document) => Array.from(p.querySelectorAll(s));
+const fmt = n => '$' + Math.round(n).toLocaleString('es-AR');
+const fmtPct = n => (n*100).toFixed(1) + '%';
+const norm = s => (s||'').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+
+const LISTAS = DATA.listas.reduce((o,l) => (o[l.cod]=l, o), {});
+const LINEAS = [...new Set(DATA.productos.map(p => p.linea))].sort();
+const COLOR_LINEAS = {COMERCIAL:'#005CA9',HOGAR:'#EF8702',RODADOS:'#0fa775',REPUESTOS:'#d97706','SIN DEFINIR':'#94a3b8',TRANSPORTE:'#0ea5e9'};
+
+// Usamos la data URL completa que arma actualizar.py (con el mime correcto según extensión).
+const LOGO_DATAURL = (LOGO_DATAURL_RAW && LOGO_DATAURL_RAW.indexOf('data:') === 0) ? LOGO_DATAURL_RAW : '';
+if (LOGO_DATAURL) $('#logoSidebar').src = LOGO_DATAURL;
+
+/* nav */
+$$('#nav button').forEach(b => b.addEventListener('click', () => {
+  $$('#nav button').forEach(x => x.classList.remove('active'));
+  b.classList.add('active');
+  $$('main > section').forEach(s => s.classList.add('hidden'));
+  $('#view-'+b.dataset.view).classList.remove('hidden');
+  $('#title').textContent = b.textContent.trim();
+}));
+
+/* header */
+$('#origen').textContent = DATA.archivo_origen;
+$('#fecha').textContent = 'Datos al ' + DATA.generado;
+$('#totsku').textContent = DATA.kpis.total_skus.toLocaleString('es-AR');
+$('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${DATA.generado}<br>Productos: ${DATA.kpis.total_skus}`;
+
+/* ============== BUSCADOR ============== */
+(function buildBuscador(){
+  $('#qLinea').innerHTML = '<option value="">Todas</option>' + LINEAS.map(l => `<option>${l}</option>`).join('');
+  const inp = $('#qInput'), ln = $('#qLinea'), st = $('#qStock'), out = $('#qResults'), cnt = $('#qCount');
+  let timer;
+  function render(){
+    const q = norm(inp.value).split(/\s+/).filter(Boolean);
+    const linea = ln.value;
+    const onlyStock = st.value === '1';
+    let res = DATA.productos;
+    if (linea) res = res.filter(p => p.linea === linea);
+    if (q.length) {
+      res = res.filter(p => {
+        const hay = norm(p.cod_alfa + ' ' + (p.detalle||''));
+        return q.every(t => hay.includes(t));
+      });
+    }
+    if (onlyStock) res = res.filter(p => Object.values(p.precios).some(x => x.s > 0));
+    res = res.slice(0, 200);
+    cnt.textContent = `${res.length} resultados${res.length===200?' (mostrando primeros 200)':''}`;
+    if (!res.length) { out.innerHTML = '<div class="empty"><b>Sin resultados</b>Probá con otra búsqueda.</div>'; return; }
+    const codsOrden = [...DATA.listas].sort((a,b)=>a.cod-b.cod).map(l => l.cod);
+    let html = '<table><thead><tr><th>Código</th><th>Detalle</th><th>Línea</th>';
+    codsOrden.forEach(c => { html += `<th class="num" title="${LISTAS[c].nombre}">L.${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    res.forEach(p => {
+      html += `<tr><td class="mono">${p.cod_alfa}</td><td>${p.detalle||''}</td><td><span class="badge linea">${p.linea}</span></td>`;
+      codsOrden.forEach(c => {
+        const x = p.precios[c];
+        if (!x) html += '<td class="num muted">—</td>';
+        else {
+          const stockCls = x.s<=0 ? (x.s<0?'neg':'zero') : '';
+          const stockTxt = `<span class="stock-pill ${stockCls}" title="stock">${x.s}</span>`;
+          const cls = x.p<0 ? 'badge bad' : x.p===0 ? 'badge warn' : '';
+          html += `<td class="num"><div class="price-cell">${cls?`<span class="${cls}">${fmt(x.p)}</span>`:fmt(x.p)} ${stockTxt}</div></td>`;
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    out.innerHTML = html;
+  }
+  function deb(){ clearTimeout(timer); timer = setTimeout(render, 100); }
+  [inp, ln, st].forEach(e => e.addEventListener('input', deb));
+  render();
+})();
+
+/* ============== COMPARADOR ============== */
+(function buildComparador(){
+  const optHtml = DATA.listas.map(l => `<option value="${l.cod}">${l.cod} — ${l.nombre}</option>`).join('');
+  $('#cmpA').innerHTML = optHtml;
+  $('#cmpB').innerHTML = optHtml;
+  if (LISTAS[3767]) $('#cmpA').value = '3767'; else if (LISTAS[3020]) $('#cmpA').value = '3020';
+  if (LISTAS[1000]) $('#cmpB').value = '1000';
+
+  function render(){
+    const a = +$('#cmpA').value, b = +$('#cmpB').value;
+    const q = norm($('#cmpQ').value).split(/\s+/).filter(Boolean);
+    const rows = [];
+    DATA.productos.forEach(p => {
+      const xa = p.precios[a], xb = p.precios[b];
+      if (!xa || !xb || xa.p<=0 || xb.p<=0) return;
+      if (q.length) {
+        const hay = norm(p.cod_alfa + ' ' + (p.detalle||''));
+        if (!q.every(t => hay.includes(t))) return;
+      }
+      rows.push({ca:p.cod_alfa, det:p.detalle, pa:xa.p, pb:xb.p, ratio: xa.p/xb.p});
+    });
+    const ratios = rows.map(r=>r.ratio).sort((x,y)=>x-y);
+    const med = ratios.length ? ratios[Math.floor(ratios.length/2)] : null;
+    const maxR = ratios.length ? ratios[ratios.length-1] : null;
+    const minR = ratios.length ? ratios[0] : null;
+    $('#cmpComunes').textContent = rows.length.toLocaleString('es-AR');
+    $('#cmpMed').textContent = med ? med.toFixed(3) + '×' : '—';
+    $('#cmpMax').textContent = (maxR && minR) ? `${minR.toFixed(2)}× a ${maxR.toFixed(2)}×` : '—';
+    rows.sort((x,y)=>Math.abs(y.ratio-1)-Math.abs(x.ratio-1));
+    const view = rows.slice(0, 200);
+    if (!view.length) { $('#cmpResults').innerHTML = '<div class="empty"><b>Sin productos en común</b></div>'; return; }
+    let html = `<table><thead><tr><th>Código</th><th>Detalle</th><th class="num">Lista ${a}</th><th class="num">Lista ${b}</th><th class="num">Ratio A÷B</th><th class="num">Δ %</th></tr></thead><tbody>`;
+    view.forEach(r => {
+      const delta = (r.ratio - 1) * 100;
+      const cls = delta > 0 ? 'good' : (delta < 0 ? 'bad' : 'mute');
+      html += `<tr><td class="mono">${r.ca}</td><td>${r.det||''}</td><td class="num">${fmt(r.pa)}</td><td class="num">${fmt(r.pb)}</td><td class="num"><b>${r.ratio.toFixed(3)}×</b></td><td class="num"><span class="badge ${cls}">${delta>0?'+':''}${delta.toFixed(1)}%</span></td></tr>`;
+    });
+    html += '</tbody></table>';
+    $('#cmpResults').innerHTML = html;
+  }
+  ['#cmpA','#cmpB','#cmpQ'].forEach(s => $(s).addEventListener('input', render));
+  render();
+})();
+
+/* ============== FOTOS DE PRODUCTOS (localStorage) ============== */
+const FOTOS_KEY = 'mya_fotos';
+function getFotos(){
+  try { return JSON.parse(localStorage.getItem(FOTOS_KEY)) || {}; }
+  catch(e) { return {}; }
+}
+function setFotos(o){
+  try { localStorage.setItem(FOTOS_KEY, JSON.stringify(o)); return true; }
+  catch(e) { alert('No hay espacio en el navegador. Quitá fotos viejas o usá la opción "Limpiar fotos".'); return false; }
+}
+function getFoto(cod){ return getFotos()[cod] || ''; }
+function saveFoto(cod, dataUrl){
+  const all = getFotos();
+  all[cod] = dataUrl;
+  if (setFotos(all)) window.cotNotify();
+}
+function deleteFoto(cod){
+  const all = getFotos();
+  delete all[cod];
+  setFotos(all);
+  window.cotNotify();
+}
+function clearAllFotos(){
+  try { localStorage.removeItem(FOTOS_KEY); window.cotNotify(); } catch(e){}
+}
+function fileToResizedDataUrl(file, maxSize){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const cv = document.createElement('canvas');
+      let w = img.width, hh = img.height;
+      if (w > hh) { if (w > maxSize) { hh = Math.round(hh * maxSize / w); w = maxSize; } }
+      else { if (hh > maxSize) { w = Math.round(w * maxSize / hh); hh = maxSize; } }
+      cv.width = w; cv.height = hh;
+      cv.getContext('2d').drawImage(img, 0, 0, w, hh);
+      resolve(cv.toDataURL('image/jpeg', 0.72));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+function pickFotoForProducto(cod_alfa){
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/*';
+  inp.onchange = async () => {
+    if (!inp.files || !inp.files[0]) return;
+    try {
+      const url = await fileToResizedDataUrl(inp.files[0], 360);
+      saveFoto(cod_alfa, url);
+    } catch(e) { alert('No pude leer la imagen.'); }
+  };
+  inp.click();
+}
+async function loadFolderOfFotos(files){
+  if (!files || !files.length) return { matched: 0, total: 0 };
+  let matched = 0;
+  const all = getFotos();
+  for (const f of files) {
+    if (!f.type || !f.type.startsWith('image/')) continue;
+    const name = (f.name || '').replace(/\.[^.]+$/, '');
+    const nameUp = name.toUpperCase();
+    const prod = DATA.productos.find(p => (p.cod_alfa||'').toUpperCase() === nameUp);
+    if (!prod) continue;
+    try {
+      const url = await fileToResizedDataUrl(f, 360);
+      all[prod.cod_alfa] = url;
+      matched++;
+    } catch(e){}
+  }
+  setFotos(all);
+  window.cotNotify();
+  return { matched, total: files.length };
+}
+
+/* ============== PLANES FAVORITOS (estrella M&A) ============== */
+const FAVORITOS_KEY = 'mya_planes_fav';
+function getFavoritos(){
+  try { return new Set(JSON.parse(localStorage.getItem(FAVORITOS_KEY) || '[]')); }
+  catch(e) { return new Set(); }
+}
+function setFavoritos(s){
+  try { localStorage.setItem(FAVORITOS_KEY, JSON.stringify(Array.from(s))); } catch(e){}
+}
+function toggleFavorito(planId){
+  const s = getFavoritos();
+  if (s.has(planId)) s.delete(planId); else s.add(planId);
+  setFavoritos(s);
+}
+function isFavorito(planId){ return getFavoritos().has(planId); }
+
+/* ============== PROMOS DEL MES (configurables) ============== */
+const PROMOS_DEFAULT = [{
+  id: 'promo_default',
+  nombre: '12 cuotas sin interés',
+  marcas: ['VISA','MASTER','NARANJA'],
+  cuotas: 12,
+  rec: 1.0,
+  activa: true
+}];
+function getPromos(){
+  try {
+    const s = localStorage.getItem('mya_promos');
+    if (!s) return JSON.parse(JSON.stringify(PROMOS_DEFAULT));
+    const p = JSON.parse(s);
+    return Array.isArray(p) ? p : JSON.parse(JSON.stringify(PROMOS_DEFAULT));
+  } catch(e) { return JSON.parse(JSON.stringify(PROMOS_DEFAULT)); }
+}
+function setPromos(arr){ try { localStorage.setItem('mya_promos', JSON.stringify(arr)); } catch(e){} }
+function buildPromosPlanes(precioTotal){
+  const promos = getPromos().filter(p => p.activa);
+  return promos.map(p => {
+    const total = precioTotal * (p.rec || 1);
+    const cuotas = Math.max(1, p.cuotas || 1);
+    const marcasStr = (p.marcas||[]).join(' / ');
+    return {
+      id: 'promo_' + p.id,
+      grupo: 'Promo del mes',
+      nombre: p.nombre + (marcasStr ? ' · ' + marcasStr : ''),
+      cuotas, factor: p.rec || 1,
+      total, cuotaValor: total / cuotas,
+      recargoPct: ((p.rec || 1) - 1) * 100,
+      isPromo: true,
+      marcasPromo: (p.marcas || []).slice()
+    };
+  });
+}
+
+/* ============== Helpers compartidos: planes de pago ============== */
+function buildPlanes(precio){
+  const planes = [];
+  planes.push({id:'contado', grupo:'Contado', nombre:'Contado / Efectivo', cuotas:1, factor:1, total:precio, cuotaValor:precio});
+  // Promociones del mes (vienen primero después de contado)
+  buildPromosPlanes(precio).forEach(p => planes.push(p));
+  // Tarjetas (ordenadas por marca y cuotas)
+  DATA.tarjetas
+    .filter(t => (t.marca||'').toLowerCase() !== 'ninguno' && (t.marca||'').toLowerCase() !== 'multitarjeta')
+    .sort((a,b) => (a.marca||'').localeCompare(b.marca||'') || a.cuotas - b.cuotas)
+    .forEach(t => {
+      const total = precio * (t.rec || 1);
+      const cuotas = Math.max(1, t.cuotas || 1);
+      planes.push({
+        id: 'tj'+t.id, grupo: 'Tarjeta · ' + (t.marca||'').trim(),
+        nombre: (t.plan || (cuotas+' cuotas')) + (t.banco ? ' · ' + t.banco : ''),
+        cuotas, factor: t.rec || 1, total, cuotaValor: total / cuotas,
+        recargoPct: ((t.rec || 1) - 1) * 100
+      });
+    });
+  // Cheques
+  DATA.cheques.filter(c => (c.cuotas||0) > 0).sort((a,b)=>a.cuotas-b.cuotas).forEach(c => {
+    const f = 1 + (c.rec || 0);
+    const total = precio * f;
+    const cuotas = Math.max(1, c.cuotas);
+    planes.push({
+      id:'chq'+c.id, grupo:'Cheque', nombre: c.plan, cuotas, factor: f,
+      total, cuotaValor: total/cuotas, recargoPct: (f - 1) * 100
+    });
+  });
+  // Crédito personal (cred=1) y terreno (cred=2)
+  DATA.condven.filter(c => c.cuotas > 0 && (c.r_fin > 0 || c.cuotas <= 12)).sort((a,b)=>a.cuotas-b.cuotas).forEach(c => {
+    const r = (c.r_fin || 0) / 100;
+    const f = 1 + r + (c.recargo||0)/100 - (c.descuento||0)/100;
+    const total = precio * f;
+    const nombreLow = (c.nombre||'').toLowerCase();
+    let grupo = 'Condición de venta';
+    if (nombreLow.includes('personal')) grupo = 'Crédito Personal (formal)';
+    else if (nombreLow.includes('terreno')) grupo = 'Crédito Terreno (informal)';
+    const cuotas = Math.max(1, c.cuotas);
+    planes.push({
+      id:'cv'+c.cod, grupo, nombre: c.nombre, cuotas, factor: f,
+      total, cuotaValor: total/cuotas, recargoPct: (f - 1) * 100
+    });
+  });
+  return planes;
+}
+
+function agruparPlanes(planes){
+  const map = {};
+  planes.forEach(p => { (map[p.grupo] = map[p.grupo] || []).push(p); });
+  return map;
+}
+
+function findProducto(qOrCod, listaCod){
+  const q = norm(qOrCod);
+  // exact match by cod_alfa
+  let p = DATA.productos.find(p => norm(p.cod_alfa) === q && p.precios[listaCod]);
+  if (p) return p;
+  // contains (todos los términos)
+  const terms = q.split(/\s+/).filter(Boolean);
+  return DATA.productos.find(p => {
+    if (!p.precios[listaCod]) return false;
+    const hay = norm(p.cod_alfa + ' ' + (p.detalle||''));
+    return terms.every(t => hay.includes(t));
+  });
+}
+
+function suggestProductos(q, listaCod, limit){
+  if (typeof limit !== 'number') limit = 8;
+  const terms = norm(q).split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  return DATA.productos.filter(p => {
+    if (!p.precios[listaCod]) return false;
+    const hay = norm(p.cod_alfa + ' ' + (p.detalle||''));
+    return terms.every(t => hay.includes(t));
+  }).slice(0, limit);
+}
+
+/* ============== CARRITO COMPARTIDO ============== */
+window.cotItems = [];
+window.cotRenderers = [];
+window.cotNotify = function(){
+  window.cotRenderers.forEach(fn => { try { fn(); } catch(e){ console.error(e); } });
+};
+window.cotAdd = function(cod_alfa, cantidad, lista){
+  if (lista) {
+    const sl = $('#simLista'); if (sl) sl.value = lista;
+    const wl = $('#waLista'); if (wl) wl.value = lista;
+  }
+  const exist = window.cotItems.find(it => it.cod_alfa === cod_alfa);
+  if (exist) exist.cantidad += (cantidad || 1);
+  else window.cotItems.push({ cod_alfa, cantidad: cantidad || 1 });
+  window.cotNotify();
+};
+window.cotRemove = function(idx){ window.cotItems.splice(idx, 1); window.cotNotify(); };
+window.cotSetCant = function(idx, n){
+  if (window.cotItems[idx]) window.cotItems[idx].cantidad = Math.max(1, parseInt(n,10) || 1);
+  window.cotNotify();
+};
+window.cotClear = function(){ window.cotItems = []; window.cotNotify(); };
+
+function renderCarritoEn(elId, opts){
+  opts = opts || {};
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const items = window.cotItems;
+  const lista = opts.lista || (+($('#simLista') ? $('#simLista').value : 3767));
+  if (!items.length) {
+    el.innerHTML = '<div class="card"><div class="card-hd">Mi cotización <small>vacía</small></div><div class="card-bd"><div class="empty" style="padding:20px"><b>No agregaste productos todavía</b>Buscá un producto arriba y tocá "+ Agregar a cotización".</div></div></div>';
+    return;
+  }
+  let totUnid = 0, sub = 0;
+  let rows = '';
+  items.forEach((it, i) => {
+    const p = DATA.productos.find(x => x.cod_alfa === it.cod_alfa);
+    if (!p) return;
+    const x = p.precios[lista];
+    const precio = x ? x.p : 0;
+    const subRow = precio * it.cantidad;
+    sub += subRow;
+    totUnid += it.cantidad;
+const foto = getFoto(p.cod_alfa);
+    const fotoCell = foto
+      ? '<div style="position:relative;width:56px;height:56px;border-radius:8px;overflow:hidden;background:#f1f5f9;border:1px solid var(--line)"><img src="'+foto+'" style="width:100%;height:100%;object-fit:cover"><button data-cot-foto-del="'+p.cod_alfa+'" title="Quitar foto" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);color:#fff;border:0;border-radius:4px;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1">✕</button></div>'
+      : '<button class="btn ghost" data-cot-foto="'+p.cod_alfa+'" title="Asignar foto" style="width:56px;height:56px;padding:0;font-size:20px;color:var(--ink-mute)">📷</button>';
+    rows += '<tr>'+
+      '<td style="width:64px;padding-right:0">'+fotoCell+'</td>'+
+      '<td><div style="font-weight:500;line-height:1.3">'+(p.detalle||'')+'</div><small class="muted">cód '+p.cod_alfa+(x?' · stock '+x.s:' · NO en lista '+lista)+'</small></td>'+
+      '<td class="num">'+(x?fmt(precio):'<span class="badge bad">N/D</span>')+'</td>'+
+      '<td class="num"><input type="number" min="1" value="'+it.cantidad+'" data-cot-i="'+i+'" class="cot-qty" style="width:72px;padding:6px 8px;text-align:right"></td>'+
+      '<td class="num total">'+(x?fmt(subRow):'—')+'</td>'+
+      '<td><button class="btn danger" data-cot-rm="'+i+'" style="padding:6px 10px">✕</button></td>'+
+    '</tr>';
+  });
+  const subBox = '<div style="padding:14px 18px;background:var(--accent-soft);border-radius:8px;border:1px solid #d6e4ef;display:flex;justify-content:space-between;align-items:center;margin-top:12px"><div><div class="lbl-big">Subtotal contado</div><div style="color:var(--accent);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums">'+fmt(sub)+'</div></div><div style="color:var(--ink-mute);font-size:12px;text-align:right">'+items.length+' producto'+(items.length===1?'':'s')+'<br>'+totUnid+' unidad'+(totUnid===1?'':'es')+'</div></div>';
+  const acciones = opts.showActions ? '<div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn ghost" id="cotVaciar">Vaciar todo</button><button class="btn orange" id="cotIrWhatsapp">Generar flyer WhatsApp →</button></div>' : '';
+  el.innerHTML = '<div class="card"><div class="card-hd">Mi cotización <small>'+items.length+' items · '+totUnid+' unidades</small></div><div class="card-bd">'+
+    '<table class="pago-tabla"><thead><tr><th></th><th>Producto</th><th class="num">P. unitario</th><th class="num" style="width:80px">Cant.</th><th class="num">Subtotal</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    subBox + acciones +
+    '</div></div>';
+  el.querySelectorAll('.cot-qty').forEach(inp => inp.addEventListener('input', () => window.cotSetCant(+inp.dataset.cotI, +inp.value)));
+  el.querySelectorAll('[data-cot-rm]').forEach(b => b.addEventListener('click', () => {
+    if (confirm('¿Quitar este producto del carrito?')) window.cotRemove(+b.dataset.cotRm);
+  }));
+  el.querySelectorAll('[data-cot-foto]').forEach(b => b.addEventListener('click', () => pickFotoForProducto(b.dataset.cotFoto)));
+  el.querySelectorAll('[data-cot-foto-del]').forEach(b => b.addEventListener('click', () => {
+    if (confirm('¿Quitar la foto de este producto?')) deleteFoto(b.dataset.cotFotoDel);
+  }));
+  if (opts.showActions) {
+    const v = el.querySelector('#cotVaciar');
+    if (v) v.addEventListener('click', () => { if (confirm('¿Vaciar todo el carrito?')) window.cotClear(); });
+    const w = el.querySelector('#cotIrWhatsapp');
+    if (w) w.addEventListener('click', () => {
+      $$('#nav button').forEach(x => x.classList.remove('active'));
+      const wb = $$('#nav button').filter(b => b.dataset.view === 'whatsapp')[0];
+      if (wb) wb.classList.add('active');
+      $$('main > section').forEach(s => s.classList.add('hidden'));
+      $('#view-whatsapp').classList.remove('hidden');
+      $('#title').textContent = 'Cotización';
+    });
+  }
+}
+
+/* ============== Badge contador en nav ============== */
+window.cotRenderers.push(function updateNavBadge(){
+  const el = document.getElementById('navCartBadge');
+  if (!el) return;
+  if (window.cotItems.length) {
+    const totUnid = window.cotItems.reduce((a,it) => a + (it.cantidad||0), 0);
+    el.textContent = totUnid;
+    el.classList.remove('hidden');
+  } else {
+    el.textContent = '';
+    el.classList.add('hidden');
+  }
+});
+
+/* ============== CARGADOR DE .accdb EN EL NAVEGADOR ============== */
+// Usa mdb-reader (https://github.com/andipaetzold/mdb-reader). La lib espera un Node Buffer
+// pero le pasamos Uint8Array — polyfilleamos en el prototype los métodos de Buffer que usa.
+
+(function polyfillBufferOnUint8Array(){
+  if (Uint8Array.prototype._mdbPolyfilled) return;
+  const P = Uint8Array.prototype;
+  function dv(self){ return new DataView(self.buffer, self.byteOffset, self.byteLength); }
+  const td = (label) => new TextDecoder(label);
+  function def(name, fn){
+    if (!P[name]) Object.defineProperty(P, name, { value: fn, configurable: true, writable: true });
+  }
+  // Lectores numéricos
+  def('readUInt8',     function(o){ return dv(this).getUint8(o); });
+  def('readUInt16LE',  function(o){ return dv(this).getUint16(o, true); });
+  def('readUInt16BE',  function(o){ return dv(this).getUint16(o, false); });
+  def('readUInt32LE',  function(o){ return dv(this).getUint32(o, true); });
+  def('readUInt32BE',  function(o){ return dv(this).getUint32(o, false); });
+  def('readInt8',      function(o){ return dv(this).getInt8(o); });
+  def('readInt16LE',   function(o){ return dv(this).getInt16(o, true); });
+  def('readInt32LE',   function(o){ return dv(this).getInt32(o, true); });
+  def('readFloatLE',   function(o){ return dv(this).getFloat32(o, true); });
+  def('readDoubleLE',  function(o){ return dv(this).getFloat64(o, true); });
+  def('readBigUInt64LE', function(o){ return dv(this).getBigUint64(o, true); });
+  def('readBigInt64LE',  function(o){ return dv(this).getBigInt64(o, true); });
+  // Lectores con longitud variable (1..6 bytes)
+  def('readUIntLE', function(offset, byteLength){
+    let val = 0, mul = 1;
+    for (let i = 0; i < byteLength; i++){ val += this[offset + i] * mul; mul *= 256; }
+    return val;
+  });
+  def('readIntLE', function(offset, byteLength){
+    let val = this.readUIntLE(offset, byteLength);
+    const mul = Math.pow(2, 8 * byteLength - 1);
+    if (val >= mul) val -= mul * 2;
+    return val;
+  });
+  // copy(target, targetStart, sourceStart, sourceEnd)
+  def('copy', function(target, targetStart, sourceStart, sourceEnd){
+    targetStart = targetStart || 0;
+    sourceStart = sourceStart || 0;
+    sourceEnd = (sourceEnd == null) ? this.length : sourceEnd;
+    const s = this.subarray(sourceStart, sourceEnd);
+    target.set(s, targetStart);
+    return s.length;
+  });
+  // equals
+  def('equals', function(other){
+    if (!other || this.length !== other.length) return false;
+    for (let i = 0; i < this.length; i++) if (this[i] !== other[i]) return false;
+    return true;
+  });
+  // toString con encoding — el de Uint8Array no soporta encoding, pisamos
+  const origToString = P.toString;
+  Object.defineProperty(P, 'toString', { configurable: true, writable: true, value: function(encoding, start, end){
+    if (!encoding) return origToString.call(this);
+    const slice = (start != null || end != null) ? this.subarray(start || 0, end == null ? this.length : end) : this;
+    const enc = String(encoding).toLowerCase();
+    if (enc === 'utf8' || enc === 'utf-8')   return td('utf-8').decode(slice);
+    if (enc === 'utf16le' || enc === 'ucs2' || enc === 'ucs-2') return td('utf-16le').decode(slice);
+    if (enc === 'ascii' || enc === 'latin1' || enc === 'binary'){
+      let s = ''; for (let i = 0; i < slice.length; i++) s += String.fromCharCode(slice[i]); return s;
+    }
+    if (enc === 'hex'){
+      let s = ''; for (let i = 0; i < slice.length; i++) s += slice[i].toString(16).padStart(2, '0'); return s;
+    }
+    return td('utf-8').decode(slice);
+  }});
+  Object.defineProperty(P, '_mdbPolyfilled', { value: true });
+})();
+
+async function importarMdbReader(){
+  if (window.MDBReader) return window.MDBReader;
+  let lastErr = null;
+
+  // 1) Bundle embebido (preferido — funciona offline y en file://)
+  if (typeof MDB_READER_SOURCE === 'string' && MDB_READER_SOURCE.length > 1000){
+    try {
+      const blob = new Blob([MDB_READER_SOURCE], {type: 'text/javascript'});
+      const url = URL.createObjectURL(blob);
+      try {
+        const mod = await import(url);
+        const MDBReader = mod.default || mod.MDBReader || mod;
+        if (MDBReader){ window.MDBReader = MDBReader; window._mdbCdn = 'embebido'; return MDBReader; }
+      } finally { URL.revokeObjectURL(url); }
+    } catch(e){ lastErr = e; console.warn('Bundle embebido falló, intento CDN:', e); }
+  }
+
+  // 2) Fallback: CDN (sólo funciona online + idealmente via http://)
+  const cdns = [
+    'https://esm.sh/mdb-reader@3?bundle',
+    'https://esm.run/mdb-reader@3',
+    'https://cdn.jsdelivr.net/npm/mdb-reader@3/+esm',
+    'https://esm.sh/mdb-reader@3'
+  ];
+  for (const url of cdns){
+    try {
+      const mod = await import(url);
+      const MDBReader = mod.default || mod.MDBReader || mod;
+      if (MDBReader) { window.MDBReader = MDBReader; window._mdbCdn = url; return MDBReader; }
+    } catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('No pude cargar mdb-reader. Regenera Cotizador.html con actualizar.bat (con internet) para embeberla.');
+}
+
+// Polyfill mínimo: si mdb-reader nos vuelve a tocar con la v2 (que llama a buffer.copy),
+// le damos un buffer "Node-like" envuelto en Uint8Array para que no rompa.
+function _toNodeLikeBuffer(u8){
+  // Si por algún motivo la lib usa .copy(target, targetStart, sourceStart, sourceEnd):
+  if (typeof u8.copy !== 'function'){
+    u8.copy = function(target, targetStart, sourceStart, sourceEnd){
+      targetStart = targetStart || 0;
+      sourceStart = sourceStart || 0;
+      sourceEnd = (sourceEnd == null) ? u8.length : sourceEnd;
+      const slice = u8.subarray(sourceStart, sourceEnd);
+      target.set(slice, targetStart);
+      return slice.length;
+    };
+  }
+  if (typeof u8.slice !== 'function' || u8.slice === Uint8Array.prototype.slice){
+    // ya está bien
+  }
+  return u8;
+}
+
+function _num(v){
+  if (v == null) return 0;
+  if (typeof v === 'number') return isNaN(v) ? 0 : v;
+  const n = parseFloat(String(v).replace(/\./g,'').replace(/,/g,'.').trim());
+  return isNaN(n) ? 0 : n;
+}
+function _int(v){ return Math.trunc(_num(v)); }
+function _str(v){ if (v == null) return ''; return String(v); }
+function _fecha10(v){
+  if (!v) return '';
+  if (v instanceof Date) return v.toISOString().slice(0,10);
+  return _str(v).slice(0,10);
+}
+
+function _safeTable(reader, name){
+  try {
+    const t = reader.getTable(name);
+    return t.getData();
+  } catch(e){
+    return [];
+  }
+}
+
+function _accdbToData(reader, archivoNombre){
+  // Reproduce lo que hace actualizar.py — mismas keys, mismo shape, mismo orden de prioridad.
+  const ig = _safeTable(reader, 'InfoGlobal');
+  const listas = [];
+  ig.forEach(r => {
+    try {
+      if (r.CodLista == null) return;
+      listas.push({
+        cod: _int(r.CodLista),
+        nombre: _str(r.NomLista),
+        desde: _fecha10(r.desde),
+        hasta: _fecha10(r.hasta),
+        facIVA: _num(r.FacIVA),
+        ahora3: _num(r.Ahora3),
+        ahora6: _num(r.Ahora6),
+      });
+    } catch(e){}
+  });
+
+  const lp = _safeTable(reader, 'lprecio');
+  const prodIdx = {};
+  const visto = new Set();
+  let skipped = 0;
+  lp.forEach(r => {
+    try {
+      const ca = r.cod_alfa;
+      const clRaw = r.CodLista;
+      if (ca == null || clRaw == null){ skipped++; return; }
+      const cl = _int(clRaw);
+      if (!ca || visto.has(ca + '__' + cl)) return;
+      visto.add(ca + '__' + cl);
+      if (!prodIdx[ca]){
+        prodIdx[ca] = {
+          cod_alfa: ca,
+          detalle: _str(r.detalle),
+          linea: _str(r.linea_prod) || 'SIN DEFINIR',
+          iva: _num(r.IVA),
+          novedad: _int(r.Novedad),
+          precios: {}
+        };
+      }
+      prodIdx[ca].precios[String(cl)] = {
+        p: _num(r.precio),
+        s: _int(r.stock),
+        a3: _num(r.Ahora3),
+        a6: _num(r.Ahora6),
+      };
+    } catch(e){ skipped++; }
+  });
+  const productos = Object.values(prodIdx);
+
+  const t = _safeTable(reader, 'Tarjetas');
+  const tarjetas = [];
+  t.forEach(r => {
+    try {
+      if (r.idTarjeta == null) return;
+      tarjetas.push({
+        id: _int(r.idTarjeta),
+        marca: _str(r.TARJETAS),
+        banco: _str(r.Banco),
+        cuotas: _int(r.Ncuotas),
+        rec: _num(r.Inc_Cobr) || 1,
+        coef: _num(r.Coeficiente) || 1,
+        plan: _str(r.Cuotas),
+      });
+    } catch(e){}
+  });
+
+  const ch = _safeTable(reader, 'Cheques');
+  const cheques = [];
+  ch.forEach(r => {
+    try {
+      if (r.IdCheques == null) return;
+      cheques.push({
+        id: _int(r.IdCheques),
+        plan: _str(r.Plan),
+        cuotas: _int(r.Cuotas),
+        rec: _num(r.RecargoChq),
+      });
+    } catch(e){}
+  });
+
+  const cv = _safeTable(reader, 'condven');
+  const condven = [];
+  cv.forEach(r => {
+    try {
+      if (r.codigo == null) return;
+      condven.push({
+        cod: _int(r.codigo),
+        nombre: _str(r.nombre),
+        descuento: _num(r.descuento),
+        recargo: _num(r.recargo),
+        cuotas: _int(r.cuotas),
+        r_fin: _num(r.r_financie),
+      });
+    } catch(e){}
+  });
+
+  const v = _safeTable(reader, 'Vendedores');
+  const porArea = {};
+  v.forEach(r => { const k = _str(r.nom_area) || '(sin zona)'; porArea[k] = (porArea[k]||0) + 1; });
+  const vendedores = Object.entries(porArea).sort((a,b)=>b[1]-a[1]).map(([area,n])=>({area, n}));
+
+  // KPIs (mismo cálculo que el script Python)
+  const total_skus = productos.length;
+  let total_combos = 0, neg_prices = 0, zero_prices = 0, zero_stock = 0, neg_stock = 0;
+  const por_linea = {}, val_lista = {};
+  productos.forEach(p => {
+    por_linea[p.linea] = (por_linea[p.linea]||0) + 1;
+    Object.entries(p.precios).forEach(([cl, x]) => {
+      total_combos++;
+      if (x.p < 0) neg_prices++;
+      if (x.p === 0) zero_prices++;
+      if (x.s <= 0) zero_stock++;
+      if (x.s < 0) neg_stock++;
+      if (x.p > 0 && x.s > 0) val_lista[cl] = (val_lista[cl]||0) + x.p * x.s;
+    });
+  });
+
+  return {
+    generado: new Date().toISOString().slice(0,10),
+    archivo_origen: archivoNombre || 'cargado-en-navegador.accdb',
+    listas, productos, tarjetas, cheques, condven, vendedores,
+    kpis: { total_skus, total_combos, neg_prices, zero_prices, zero_stock, neg_stock, por_linea, val_lista }
+  };
+}
+
+function _setLoadLabel(txt, color){
+  const lbl = document.getElementById('loadAccdbLabel');
+  if (lbl) lbl.textContent = txt;
+  const pill = document.getElementById('loadAccdbPill');
+  if (pill && color){
+    pill.style.background = color.bg; pill.style.color = color.fg; pill.style.borderColor = color.br;
+  }
+}
+
+async function cargarAccdbDesdeArchivo(file){
+  if (!file) return;
+  const nombre = file.name || 'archivo.accdb';
+  _setLoadLabel('⏳ Cargando ' + nombre + '…', {bg:'#fff7ed', fg:'#9a3412', br:'#fed7aa'});
+  try {
+    const MDBReader = await importarMdbReader();
+    const buf = await file.arrayBuffer();
+    const u8 = _toNodeLikeBuffer(new Uint8Array(buf));
+    let reader;
+    try {
+      reader = new MDBReader(u8);
+    } catch(eFirst){
+      // Si la v2 sigue pidiendo Buffer real, probamos vía Blob/ArrayBuffer y le inyectamos .copy en cada vista
+      const u8b = _toNodeLikeBuffer(new Uint8Array(buf.slice(0)));
+      reader = new MDBReader(u8b);
+    }
+    const nueva = _accdbToData(reader, nombre);
+    if (!nueva.productos.length) throw new Error('No encontré productos en este archivo (¿tabla lprecio vacía?)');
+
+    // Reemplazamos DATA y rebuildeamos índices
+    Object.keys(DATA).forEach(k => { delete DATA[k]; });
+    Object.assign(DATA, nueva);
+    Object.keys(LISTAS).forEach(k => { delete LISTAS[k]; });
+    DATA.listas.forEach(l => { LISTAS[l.cod] = l; });
+
+    // Re-render: actualizo header + sidebar + selects + items que pudieran quedar inválidos
+    const fechaEl = document.getElementById('fecha'); if (fechaEl) fechaEl.textContent = 'Datos al ' + DATA.generado;
+    const totskuEl = document.getElementById('totsku'); if (totskuEl) totskuEl.textContent = DATA.kpis.total_skus.toLocaleString('es-AR');
+    const origenEl = document.getElementById('origen'); if (origenEl) origenEl.textContent = DATA.archivo_origen;
+    const metaEl = document.getElementById('meta');
+    if (metaEl){
+      metaEl.innerHTML = 'Origen:<br><b>' + DATA.archivo_origen + '</b><br>Generado: ' + DATA.generado + '<br>Productos: ' + DATA.kpis.total_skus;
+    }
+    const waLista = document.getElementById('waLista');
+    if (waLista){
+      const prev = waLista.value;
+      waLista.innerHTML = DATA.listas.map(l => '<option value="'+l.cod+'">'+l.cod+' — '+l.nombre+'</option>').join('');
+      if (LISTAS[prev]) waLista.value = prev;
+      else if (LISTAS[3767]) waLista.value = '3767';
+      else if (LISTAS[3020]) waLista.value = '3020';
+    }
+    // Saco del carrito los productos que ya no existen en la nueva base
+    if (Array.isArray(window.cotItems)){
+      window.cotItems = window.cotItems.filter(it => DATA.productos.find(p => p.cod_alfa === it.cod_alfa));
+    }
+    if (typeof window.cotNotify === 'function') window.cotNotify();
+    if (typeof window.refreshAll === 'function') window.refreshAll();
+
+    _setLoadLabel('✓ ' + nombre + ' (' + DATA.productos.length + ' SKUs)', {bg:'#ecfdf5', fg:'#065f46', br:'#a7f3d0'});
+    // Vuelve al label normal después de 5s
+    setTimeout(() => _setLoadLabel('📁 Cargar otro .accdb', {bg:'#eff6ff', fg:'#1d4ed8', br:'#bfdbfe'}), 5000);
+  } catch(e){
+    console.error(e);
+    _setLoadLabel('⚠ Error: ' + ((e && e.message) || e), {bg:'#fef2f2', fg:'#991b1b', br:'#fecaca'});
+    setTimeout(() => _setLoadLabel('📁 Cargar .accdb', {bg:'#eff6ff', fg:'#1d4ed8', br:'#bfdbfe'}), 8000);
+    alert('No pude leer el archivo .accdb\n\n' + ((e && e.message) || e) + '\n\nSi tu .accdb está truncado / corrupto, regeneralo con actualizar.bat.');
+  }
+}
+
+// --- Listeners: file picker + drag-and-drop sobre toda la ventana ---
+(function setupAccdbLoader(){
+  const inp = document.getElementById('loadAccdbInput');
+  const btn = document.getElementById('loadAccdbPill');
+  if (btn && inp){
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      // feedback visual inmediato para que el usuario sepa que el click se registró
+      _setLoadLabel('📂 Elegí tu archivo…', {bg:'#eff6ff', fg:'#1d4ed8', br:'#bfdbfe'});
+      inp.click();
+    });
+  }
+  if (inp){
+    inp.addEventListener('change', function(e){
+      const f = e.target.files && e.target.files[0];
+      if (f) cargarAccdbDesdeArchivo(f);
+      else _setLoadLabel('📁 Cargar .accdb', {bg:'#eff6ff', fg:'#1d4ed8', br:'#bfdbfe'});
+      e.target.value = ''; // permite recargar el mismo archivo
+    });
+  }
+  // Drag-and-drop global
+  ['dragenter','dragover'].forEach(ev => {
+    window.addEventListener(ev, function(e){
+      if (!e.dataTransfer) return;
+      const items = e.dataTransfer.items || [];
+      for (const it of items){ if (it.kind === 'file'){ e.preventDefault(); break; } }
+    });
+  });
+  window.addEventListener('drop', function(e){
+    if (!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+    const f = e.dataTransfer.files[0];
+    if (/\.(accdb|mdb)$/i.test(f.name)){
+      e.preventDefault();
+      cargarAccdbDesdeArchivo(f);
+    }
+  });
+})();
+
+/* ============== WHATSAPP / COTIZACIÓN MULTI-PRODUCTO ============== */
+(function buildWhatsapp(){
+  // ---- Setup inicial ----
+  const optHtml = DATA.listas.map(l => '<option value="'+l.cod+'">'+l.cod+' — '+l.nombre+'</option>').join('');
+  $('#waLista').innerHTML = optHtml;
+  if (LISTAS[3767]) $('#waLista').value = '3767'; else if (LISTAS[3020]) $('#waLista').value = '3020';
+
+  // ---- Estado local de la pantalla ----
+  let planes = [];
+  let seleccion = new Set();
+  let logoImg = null;
+
+  // ---- Helpers ----
+  function getLista(){ return +$('#waLista').value; }
+
+  function calcSubtotalBruto(){
+    const lista = getLista();
+    let total = 0;
+    window.cotItems.forEach(it => {
+      const p = DATA.productos.find(x => x.cod_alfa === it.cod_alfa);
+      if (p && p.precios[lista]) total += p.precios[lista].p * it.cantidad;
+    });
+    return total;
+  }
+  function getDescuentoPct(){
+    const v = parseFloat($('#waDescuento') ? $('#waDescuento').value : 0) || 0;
+    return Math.min(100, Math.max(0, v));
+  }
+  function calcSubtotalContado(){
+    return calcSubtotalBruto() * (1 - getDescuentoPct()/100);
+  }
+
+  function rebuildPlanes(){
+    const sub = calcSubtotalContado();
+    if (sub <= 0) { planes = []; return; }
+    planes = buildPlanes(sub);
+  }
+
+  function wrapText(ctx, text, maxWidth){
+    const words = (text||'').split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+      const test = cur ? cur + ' ' + w : w;
+      if (ctx.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = w; }
+      else cur = test;
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  function rrect(ctx, x, y, w, hh, r){
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x,y,w,hh,r); }
+    else { ctx.beginPath(); ctx.rect(x,y,w,hh); }
+  }
+
+  // ---- BÚSQUEDA Y AGREGAR ----
+  function renderSugs(){
+    const lista = getLista();
+    const sugs = suggestProductos($('#waQ').value, lista);
+    if (!sugs.length || !$('#waQ').value) { $('#waSugs').innerHTML = ''; return; }
+    $('#waSugs').innerHTML = sugs.map(p => {
+      const x = p.precios[lista];
+      return '<div class="item" data-cod="'+p.cod_alfa+'"><div class="det"><b>'+(p.detalle||'')+'</b><small>cód '+p.cod_alfa+' · '+p.linea+'</small></div><div class="num"><b>'+fmt(x.p)+'</b></div></div>';
+    }).join('');
+    $$('#waSugs .item').forEach(el => el.addEventListener('click', () => {
+      $('#waQ').value = el.dataset.cod;
+      $('#waSugs').innerHTML = '';
+    }));
+  }
+
+  function agregarItem(){
+    const cod = $('#waQ').value.trim();
+    const cant = Math.max(1, parseInt($('#waCantNuevo').value,10) || 1);
+    if (!cod) { $('#waMsg').textContent = 'Tipeá un código o descripción primero.'; return; }
+    const lista = getLista();
+    let p = DATA.productos.find(x => x.cod_alfa === cod && x.precios[lista]);
+    if (!p) {
+      const sug = suggestProductos(cod, lista, 1);
+      if (sug.length) p = sug[0];
+    }
+    if (!p) { $('#waMsg').textContent = 'No encontré ese producto en la lista '+lista+'.'; return; }
+    window.cotAdd(p.cod_alfa, cant);
+    $('#waQ').value = '';
+    $('#waCantNuevo').value = 1;
+    $('#waSugs').innerHTML = '';
+    $('#waMsg').textContent = '✓ Agregado: ' + (p.detalle||'').slice(0,50);
+    setTimeout(() => { if ($('#waMsg').textContent.startsWith('✓')) $('#waMsg').textContent = ''; }, 2000);
+  }
+
+  // ---- ITEMS (productos en la cotización) ----
+  function renderItems(){
+    const lista = getLista();
+    if (!window.cotItems.length) {
+      $('#waItems').innerHTML = '<div class="empty" style="padding:20px"><b>Aún no agregaste productos</b>Buscá arriba y tocá "Agregar" o tocá Enter.</div>';
+      $('#waProdCount').textContent = '0 items';
+      $('#waSubtotal').innerHTML = '';
+      return;
+    }
+    let totUnid = 0;
+    let html = '<table class="pago-tabla"><thead><tr><th></th><th>Producto</th><th class="num">P. unitario</th><th class="num" style="width:80px">Cant.</th><th class="num">Subtotal</th><th></th></tr></thead><tbody>';
+    window.cotItems.forEach((it,i) => {
+      const p = DATA.productos.find(x => x.cod_alfa === it.cod_alfa);
+      if (!p) return;
+      const x = p.precios[lista];
+      const precio = x ? x.p : 0;
+      const sub = precio * it.cantidad;
+      totUnid += it.cantidad;
+      const foto = getFoto(p.cod_alfa);
+      const fotoCell = foto
+        ? '<div style="position:relative;width:56px;height:56px;border-radius:8px;overflow:hidden;background:#f1f5f9;border:1px solid var(--line)"><img src="'+foto+'" style="width:100%;height:100%;object-fit:cover"><button data-wa-foto-del="'+p.cod_alfa+'" title="Quitar foto" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);color:#fff;border:0;border-radius:4px;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1">✕</button></div>'
+        : '<button class="btn ghost" data-wa-foto="'+p.cod_alfa+'" title="Asignar foto" style="width:56px;height:56px;padding:0;font-size:20px;color:var(--ink-mute)">📷</button>';
+      html += '<tr>'+
+        '<td style="width:64px;padding-right:0">'+fotoCell+'</td>'+
+        '<td><div style="font-weight:500;line-height:1.3">'+(p.detalle||'')+'</div><small class="muted">cód '+p.cod_alfa+(x ? ' · stock '+x.s : ' · NO existe en lista '+lista)+'</small></td>'+
+        '<td class="num">'+(x?fmt(precio):'<span class="badge bad">N/D</span>')+'</td>'+
+        '<td class="num"><input type="number" min="1" value="'+it.cantidad+'" data-i="'+i+'" class="qty-input" style="width:72px;padding:6px 8px;text-align:right"></td>'+
+        '<td class="num total">'+(x?fmt(sub):'—')+'</td>'+
+        '<td><button class="btn danger" data-rm="'+i+'" style="padding:6px 10px">✕</button></td>'+
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    $('#waItems').innerHTML = html;
+    $('#waProdCount').textContent = window.cotItems.length+' items · '+totUnid+' unidades';
+
+    $$('#waItems .qty-input').forEach(inp => inp.addEventListener('input', () => {
+      window.cotSetCant(+inp.dataset.i, +inp.value);
+    }));
+    $$('#waItems button[data-rm]').forEach(b => b.addEventListener('click', () => {
+      if (confirm('¿Quitar este producto del carrito?')) window.cotRemove(+b.dataset.rm);
+    }));
+    $$('#waItems [data-wa-foto]').forEach(b => b.addEventListener('click', () => pickFotoForProducto(b.dataset.waFoto)));
+    $$('#waItems [data-wa-foto-del]').forEach(b => b.addEventListener('click', () => {
+      if (confirm('¿Quitar la foto de este producto?')) deleteFoto(b.dataset.waFotoDel);
+    }));
+
+    const sub = calcSubtotalContado();
+    const pctDesc = getDescuentoPct();
+    const bruto = calcSubtotalBruto();
+    const ahorro = bruto - sub;
+    const descLine = pctDesc > 0 ? '<div style="font-size:12px;color:var(--ink-mute);margin-top:4px"><s>'+fmt(bruto)+'</s> · −'+pctDesc.toFixed(1)+'% ('+fmt(ahorro)+' de descuento)</div>' : '';
+    $('#waSubtotal').innerHTML = '<div style="padding:14px 18px;background:var(--accent-soft);border-radius:8px;border:1px solid #d6e4ef;display:flex;justify-content:space-between;align-items:center"><div><div class="lbl-big">Total contado</div><div style="color:var(--accent);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums">'+fmt(sub)+'</div>'+descLine+'</div><div style="color:var(--ink-mute);font-size:12px;text-align:right">'+window.cotItems.length+' producto'+(window.cotItems.length===1?'':'s')+'<br>'+totUnid+' unidad'+(totUnid===1?'':'es')+'</div></div>';
+  }
+
+  // ---- PROMOS ----
+  function renderPromos(){
+    const promos = getPromos();
+    if (!promos.length) {
+      $('#waPromos').innerHTML = '<div class="muted" style="font-size:12.5px">No hay promociones cargadas. Tocá "+ Nueva promo" arriba para agregar una.</div>';
+      return;
+    }
+    $('#waPromos').innerHTML = promos.map((p,i) =>
+      '<div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;padding:10px;border:1px solid var(--line-soft);border-radius:8px;margin-bottom:6px;align-items:center">'+
+        '<input type="checkbox" data-i="'+i+'" '+(p.activa?'checked':'')+' class="promo-toggle">'+
+        '<div><b>'+p.nombre+'</b> · '+p.cuotas+' cuotas · '+(p.marcas||[]).join(', ')+'<br>'+
+        '<small class="muted">Recargo: '+(((p.rec||1)-1)*100).toFixed(1)+'% '+(p.rec===1?'(sin interés)':'')+'</small></div>'+
+        '<button class="btn ghost" data-edit="'+i+'" style="padding:6px 10px;font-size:12px">✎</button>'+
+        '<button class="btn danger" data-del="'+i+'" style="padding:6px 10px">✕</button>'+
+      '</div>'
+    ).join('');
+    $$('#waPromos .promo-toggle').forEach(cb => cb.addEventListener('change', () => {
+      const arr = getPromos();
+      arr[+cb.dataset.i].activa = cb.checked;
+      setPromos(arr);
+      refreshAll();
+    }));
+    $$('#waPromos [data-del]').forEach(b => b.addEventListener('click', () => {
+      if (!confirm('¿Eliminar esta promoción?')) return;
+      const arr = getPromos();
+      arr.splice(+b.dataset.del, 1);
+      setPromos(arr);
+      renderPromos();
+      refreshAll();
+    }));
+    $$('#waPromos [data-edit]').forEach(b => b.addEventListener('click', () => {
+      promoForm(+b.dataset.edit);
+    }));
+  }
+
+  function promoForm(idx){
+    const arr = getPromos();
+    const p = idx >= 0 ? arr[idx] : { nombre:'', marcas:['VISA','MASTER','NARANJA'], cuotas:12, rec:1.0, activa:true };
+    const nombre = prompt('Nombre de la promoción:', p.nombre);
+    if (nombre === null) return;
+    const marcas = prompt('Marcas separadas por coma (ej: VISA,MASTER,NARANJA):', (p.marcas||[]).join(','));
+    if (marcas === null) return;
+    const cuotas = prompt('Cantidad de cuotas:', p.cuotas);
+    if (cuotas === null) return;
+    const rec = prompt('Coeficiente de recargo (1 = sin interés, 1.20 = +20%):', p.rec);
+    if (rec === null) return;
+    const nuevo = {
+      id: idx >= 0 ? p.id : ('promo_' + Date.now()),
+      nombre: nombre.trim() || 'Promoción',
+      marcas: marcas.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean),
+      cuotas: Math.max(1, parseInt(cuotas,10) || 12),
+      rec: Math.max(0.1, parseFloat(rec) || 1),
+      activa: true
+    };
+    if (idx >= 0) arr[idx] = nuevo; else arr.push(nuevo);
+    setPromos(arr);
+    renderPromos();
+    refreshAll();
+  }
+
+  // ---- PLANES (checks) ----
+  let filtroCat = 'todos';
+  function categoriaDePlan(pl){
+    if (pl.grupo === 'Contado') return 'contado';
+    if (pl.isPromo || /^Tarjeta/.test(pl.grupo)) return 'tarjeta';
+    if (pl.grupo === 'Crédito Personal (formal)') return 'formal';
+    if (pl.grupo === 'Crédito Terreno (informal)') return 'informal';
+    if (pl.grupo === 'Cheque') return 'cheque';
+    return 'otros';
+  }
+  function renderFiltros(){
+    if (!planes.length) { $('#waPlanesFiltro').innerHTML = ''; return; }
+    const total = { todos: planes.length, favoritos: 0, contado: 0, tarjeta: 0, formal: 0, informal: 0, cheque: 0 };
+    const sel = { todos: 0, favoritos: 0, contado: 0, tarjeta: 0, formal: 0, informal: 0, cheque: 0 };
+    planes.forEach((p, i) => {
+      const c = categoriaDePlan(p);
+      total[c] = (total[c]||0) + 1;
+      if (isFavorito(p.id)) total.favoritos++;
+      if (seleccion.has(i)) {
+        sel.todos++;
+        sel[c] = (sel[c]||0) + 1;
+        if (isFavorito(p.id)) sel.favoritos++;
+      }
+    });
+    const cats = [
+      { id: 'favoritos', label: '★ Favoritos' },
+      { id: 'contado',   label: 'Contado' },
+      { id: 'tarjeta',   label: 'Tarjeta' },
+      { id: 'formal',    label: 'Formal' },
+      { id: 'informal',  label: 'Informal' },
+      { id: 'cheque',    label: 'Cheques' },
+      { id: 'todos',     label: 'Todos' },
+    ];
+    $('#waPlanesFiltro').innerHTML = cats.map(c => {
+      const tot = total[c.id] || 0;
+      if (tot === 0 && c.id !== 'todos') return '';
+      const tildados = sel[c.id] || 0;
+      const active = filtroCat === c.id;
+      const numCls = tildados > 0 ? 'badge-num tildados' : 'badge-num';
+      const numTxt = tildados > 0 ? (tildados + '/' + tot) : String(tot);
+      return '<button type="button" class="filtro-cat '+(active?'active':'')+'" data-cat="'+c.id+'">'+c.label+' <span class="'+numCls+'">'+numTxt+'</span></button>';
+    }).join('');
+    $$('#waPlanesFiltro .filtro-cat').forEach(b => b.addEventListener('click', () => {
+      filtroCat = b.dataset.cat;
+      renderFiltros();
+      renderChecks();
+    }));
+  }
+  function renderChecks(){
+    $('#waCuentaPlanes').textContent = seleccion.size ? (seleccion.size+' seleccionados') : '';
+    renderFiltros();
+    if (!planes.length) {
+      $('#waPlanes').innerHTML = '<div class="muted" style="font-size:12.5px;padding:8px">Agregá productos para ver los planes disponibles.</div>';
+      return;
+    }
+    // Filtrar planes según categoría elegida
+    let visibles = planes.map((p,i) => ({pl:p, i:i}));
+    if (filtroCat === 'favoritos') visibles = visibles.filter(x => isFavorito(x.pl.id));
+    else if (filtroCat !== 'todos') visibles = visibles.filter(x => categoriaDePlan(x.pl) === filtroCat);
+    if (!visibles.length) {
+      $('#waPlanes').innerHTML = '<div class="muted" style="font-size:12.5px;padding:14px;text-align:center">No hay planes en esta categoría.'+(filtroCat==='favoritos'?'<br>Marcá planes con ★ para que aparezcan acá.':'')+'</div>';
+      return;
+    }
+    $('#waPlanes').innerHTML = visibles.map(({pl,i}) => {
+      const promoBadge = pl.isPromo ? '<span class="badge orange" style="margin-left:6px">PROMO</span>' : '';
+      const isContado = pl.cuotas <= 1;
+      const conRecargo = !isContado && pl.recargoPct > 0.5;
+      const valorPrincipal = isContado ? fmt(pl.total) : fmt(pl.cuotaValor) + ' / cuota';
+      let detalle;
+      if (isContado) {
+        detalle = pl.recargoPct ? (pl.recargoPct>0?'+':'') + pl.recargoPct.toFixed(1) + '%' : 'pago único';
+      } else if (conRecargo) {
+        detalle = pl.cuotas + ' cuotas · ' + (pl.recargoPct>0?'+':'') + pl.recargoPct.toFixed(1) + '% [total no se muestra al cliente]';
+      } else {
+        detalle = pl.cuotas + ' cuotas sin interés · Total ' + fmt(pl.total);
+      }
+      const fav = isFavorito(pl.id);
+      const star = '<button type="button" class="plan-fav-toggle" data-plan-id="'+pl.id+'" title="'+(fav?'Quitar de Planes M&A':'Marcar como Plan M&A favorito')+'" style="background:none;border:0;cursor:pointer;font-size:20px;color:'+(fav?'var(--orange)':'#cbd5e1')+';padding:0 4px;line-height:1">★</button>';
+      return '<label class="wa-check"><input type="checkbox" data-i="'+i+'" '+(seleccion.has(i)?'checked':'')+'>'+
+        star+
+        '<div><div><b>'+pl.grupo+'</b>'+promoBadge+' · '+pl.nombre+'</div>'+
+        '<small class="muted">'+detalle+'</small></div>'+
+        '<span class="num"><b style="color:var(--accent)">'+valorPrincipal+'</b></span></label>';
+    }).join('');
+    $$('#waPlanes .plan-fav-toggle').forEach(b => b.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      toggleFavorito(b.dataset.planId);
+      renderChecks();
+    }));
+    $$('#waPlanes input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => {
+      const i = +cb.dataset.i;
+      if (cb.checked) seleccion.add(i); else seleccion.delete(i);
+      $('#waCuentaPlanes').textContent = seleccion.size ? (seleccion.size+' seleccionados') : '';
+      drawCanvas();
+    }));
+  }
+
+  function applyPreset(filter){
+    seleccion.clear();
+    planes.forEach((pl,i) => { if (filter(pl)) seleccion.add(i); });
+    renderChecks();
+    drawCanvas();
+  }
+
+  // ---- DRAW CANVAS ----
+  function drawCanvas(){
+    const cv = $('#waCanvas');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    const PAD_X = 70;
+
+    // Fondo
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0,0,W,H);
+
+    // ---- HEADER ----
+    const headerH = 240;
+    const grad = ctx.createLinearGradient(0,0,W,0);
+    grad.addColorStop(0,'#005CA9'); grad.addColorStop(1,'#0d47a1');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,headerH);
+
+    // Logo circular blanco
+    const logoSize = 130;
+    const logoX = PAD_X, logoY = (headerH - logoSize) / 2;
+    if (logoImg && logoImg.complete) {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(logoX+logoSize/2, logoY+logoSize/2, logoSize/2+10, 0, Math.PI*2); ctx.fill();
+      ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+    }
+
+    // Texto M&A + fecha
+    const txtX = logoX + logoSize + 30;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 52px -apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText('M&A', txtX, logoY + 0);
+    ctx.font = '500 17px -apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.95)';
+    ctx.fillText('EQUIPAMIENTOS COMERCIALES', txtX, logoY + 58);
+    ctx.font = '300 15px -apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.70)';
+    ctx.fillText('CUIT: 33-70240016-9', txtX, logoY + 86);
+    ctx.fillText('Cotización · ' + DATA.generado.split('-').reverse().join('/'), txtX, logoY + 108);
+    ctx.textBaseline = 'alphabetic';
+
+    // Stripe naranja
+    ctx.fillStyle = '#EF8702';
+    ctx.fillRect(0, headerH, W, 6);
+
+    // ---- CUERPO ----
+    let y = headerH + 50;
+
+    // Cliente (si hay)
+    const cliente = ($('#waCliente').value || '').trim();
+    const dniCuit = ($('#waCuitCliente') ? $('#waCuitCliente').value : '').trim();
+    if (cliente || dniCuit) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 14px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText('COTIZACIÓN PARA', PAD_X, y);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 30px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText(cliente || '—', PAD_X, y + 36);
+      if (dniCuit) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '16px -apple-system,Segoe UI,Roboto,sans-serif';
+        ctx.fillText('DNI / CUIT: ' + dniCuit, PAD_X, y + 66);
+        y += 100;
+      } else {
+        y += 80;
+      }
+    }
+
+    if (!window.cotItems.length) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '24px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Agregá productos para ver la cotización', W/2, 700);
+      ctx.textAlign = 'left';
+      drawFooter(ctx, W, H);
+      return;
+    }
+
+    const lista = getLista();
+    const seleccionadosTmp = Array.from(seleccion).map(i => planes[i]).filter(Boolean);
+    const tieneContadoTmp = seleccionadosTmp.some(p => p.grupo === 'Contado');
+    const haySinRecargo = seleccionadosTmp.some(p => p.cuotas > 1 && p.recargoPct <= 0.5);
+    const ocultarPrecioProducto = !tieneContadoTmp && seleccionadosTmp.length > 0 && !haySinRecargo;
+
+    // ---- Sección PRODUCTOS ----
+    drawSectionTitle(ctx, 'PRODUCTOS', PAD_X, y);
+    y += 50;
+
+    let subtotal = 0;
+    window.cotItems.forEach(it => {
+      const p = DATA.productos.find(x => x.cod_alfa === it.cod_alfa);
+      if (!p || !p.precios[lista]) return;
+      const precio = p.precios[lista].p;
+      const sub = precio * it.cantidad;
+      subtotal += sub;
+      const rowH = 124;
+      // Card
+      ctx.fillStyle = '#fafafa';
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, rowH, 14); ctx.fill();
+      ctx.strokeStyle = '#ededed'; ctx.lineWidth = 1;
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, rowH, 14); ctx.stroke();
+      // Foto
+      const fotoUrl = getFoto(p.cod_alfa);
+      let textX = PAD_X + 26;
+      if (fotoUrl && window._fotoCache && window._fotoCache[p.cod_alfa] && window._fotoCache[p.cod_alfa].complete) {
+        const fimg = window._fotoCache[p.cod_alfa];
+        const fx = PAD_X + 18, fy = y + 18, fs = 88;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.08)';
+        ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+        ctx.fillStyle = '#fff';
+        rrect(ctx, fx, fy, fs, fs, 12); ctx.fill();
+        ctx.restore();
+        const sw = fimg.width >= fimg.height ? fimg.height : fimg.width;
+        const sh = sw;
+        const sx = (fimg.width - sw) / 2;
+        const sy = (fimg.height - sh) / 2;
+        ctx.save();
+        rrect(ctx, fx, fy, fs, fs, 12); ctx.clip();
+        ctx.drawImage(fimg, sx, sy, sw, sh, fx, fy, fs, fs);
+        ctx.restore();
+        ctx.strokeStyle = '#e5e5e5'; ctx.lineWidth = 1;
+        rrect(ctx, fx, fy, fs, fs, 12); ctx.stroke();
+        textX = fx + fs + 24;
+      }
+      // Detalle producto
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 22px -apple-system,Segoe UI,Roboto,sans-serif';
+      const det = (p.detalle||'');
+      const detShort = det.length > 60 ? det.slice(0,58)+'…' : det;
+      ctx.fillText(detShort, textX, y + 46);
+      // Cantidad / precio
+      ctx.fillStyle = '#64748b';
+      ctx.font = '17px -apple-system,Segoe UI,Roboto,sans-serif';
+      if (ocultarPrecioProducto) {
+        ctx.fillText('Cantidad: ' + it.cantidad + ' u.', textX, y + 80);
+      } else {
+        ctx.fillText(it.cantidad + ' u. × ' + fmt(precio), textX, y + 80);
+        ctx.fillStyle = '#005CA9';
+        ctx.font = 'bold 28px -apple-system,Segoe UI,Roboto,sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(fmt(sub), W - PAD_X - 22, y + 70);
+        ctx.textAlign = 'left';
+      }
+      y += rowH + 12;
+    });
+
+    y += 12;
+
+    // ---- TOTAL CONTADO (solo si tieneContado) ----
+    const seleccionados = seleccionadosTmp;
+    const tieneContado = tieneContadoTmp;
+    if (tieneContado) {
+      const boxH = 110;
+      ctx.fillStyle = '#eef5fb';
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 12); ctx.fill();
+      ctx.fillStyle = '#005CA9'; ctx.fillRect(PAD_X, y, 6, boxH);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 14px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText('TOTAL', PAD_X + 30, y + 36);
+      ctx.fillStyle = '#005CA9';
+      ctx.font = 'bold 56px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText(fmt(subtotal), PAD_X + 30, y + 92);
+      y += boxH + 28;
+    }
+
+    // ---- PLANES ----
+    const planesFinanciados = seleccionados.filter(p => p && p.grupo !== 'Contado');
+    if (planesFinanciados.length) {
+      drawSectionTitle(ctx, tieneContado ? 'OPCIONES DE FINANCIACIÓN' : 'PLAN DE PAGO', PAD_X, y);
+      y += 50;
+      const itemH = 112;
+      const gap = 10;
+      const reservedFooter = 200;
+      const maxItems = Math.max(1, Math.floor((H - y - reservedFooter) / (itemH + gap)));
+      planesFinanciados.slice(0, maxItems).forEach(pl => {
+        if (pl.isPromo) {
+          ctx.fillStyle = '#fff5e6';
+          rrect(ctx, PAD_X, y, W - 2*PAD_X, itemH, 14); ctx.fill();
+          ctx.strokeStyle = '#EF8702'; ctx.lineWidth = 2;
+          rrect(ctx, PAD_X, y, W - 2*PAD_X, itemH, 14); ctx.stroke();
+        } else {
+          ctx.fillStyle = '#fafafa';
+          rrect(ctx, PAD_X, y, W - 2*PAD_X, itemH, 14); ctx.fill();
+          ctx.strokeStyle = '#ededed'; ctx.lineWidth = 1;
+          rrect(ctx, PAD_X, y, W - 2*PAD_X, itemH, 14); ctx.stroke();
+        }
+        const isContado = pl.cuotas <= 1;
+        const info = planDisplayInfo(pl);
+        const xLeft = PAD_X + 26;
+        // Línea 0 (tag): categoría arriba en chico mayúscula
+        if (info.tag) {
+          ctx.fillStyle = pl.isPromo ? '#EF8702' : '#94a3b8';
+          ctx.font = '700 12px -apple-system,Segoe UI,Roboto,sans-serif';
+          ctx.fillText(info.tag, xLeft, y + 22);
+        }
+        // Línea 1: título principal
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px -apple-system,Segoe UI,Roboto,sans-serif';
+        ctx.fillText(info.titulo, xLeft, y + 50);
+        // Línea 2: subtítulo (marca, sin interés, total)
+        ctx.fillStyle = '#64748b';
+        ctx.font = '15px -apple-system,Segoe UI,Roboto,sans-serif';
+        let sub2 = info.subtitulo;
+        if (!isContado && pl.recargoPct <= 0.5) {
+          sub2 = sub2 ? (sub2 + ' · Total ' + fmt(pl.total)) : ('Total ' + fmt(pl.total));
+        }
+        if (sub2) ctx.fillText(sub2, xLeft, y + 78);
+        // Valor a la derecha
+        ctx.fillStyle = pl.isPromo ? '#EF8702' : '#005CA9';
+        ctx.font = 'bold 32px -apple-system,Segoe UI,Roboto,sans-serif';
+        ctx.textAlign = 'right';
+        const big = isContado ? fmt(pl.total) : fmt(pl.cuotaValor);
+        ctx.fillText(big, W - PAD_X - 22, y + 56);
+        if (!isContado && info.periodoLabel) {
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '14px -apple-system,Segoe UI,Roboto,sans-serif';
+          ctx.fillText(info.periodoLabel, W - PAD_X - 22, y + 82);
+        }
+        ctx.textAlign = 'left';
+        y += itemH + gap;
+      });
+      if (planesFinanciados.length > maxItems) {
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '15px -apple-system,Segoe UI,Roboto,sans-serif';
+        ctx.fillText('+ ' + (planesFinanciados.length - maxItems) + ' planes más', PAD_X, y + 12);
+      }
+    }
+
+    drawFooter(ctx, W, H);
+  }
+
+  function planDisplayInfo(pl){
+    const cat = categoriaDePlan(pl);
+    const isContado = pl.cuotas <= 1;
+    const sinInteres = pl.recargoPct <= 0.5;
+    let titulo = '', subtitulo = '', periodoLabel = '', tag = '';
+    if (isContado) {
+      titulo = 'Pago contado';
+      periodoLabel = '';
+    } else if (cat === 'informal') {
+      tag = 'PLAN SEMANAL';
+      titulo = pl.cuotas + ' semanas de:';
+      subtitulo = sinInteres ? 'sin interés' : '';
+      periodoLabel = 'por semana';
+    } else if (cat === 'formal') {
+      tag = 'CRÉDITO PERSONAL';
+      titulo = pl.cuotas + ' cuotas mensuales de:';
+      subtitulo = sinInteres ? 'sin interés' : '';
+      periodoLabel = 'por mes';
+    } else if (cat === 'cheque') {
+      tag = 'PAGO CON CHEQUES';
+      titulo = pl.cuotas + ' cheques de:';
+      subtitulo = sinInteres ? 'sin interés' : '';
+      periodoLabel = 'por cheque';
+    } else if (pl.isPromo) {
+      tag = 'PROMO DEL MES';
+      titulo = pl.cuotas + ' cuotas sin interés de:';
+      subtitulo = (pl.marcasPromo && pl.marcasPromo.length) ? ('con tarjeta ' + pl.marcasPromo.join(' / ')) : '';
+      periodoLabel = 'por mes';
+    } else {
+      tag = 'PAGO CON TARJETA';
+      titulo = pl.cuotas + ' cuotas de:';
+      const marca = (pl.grupo || '').replace(/^Tarjeta\s*·?\s*/i, '').trim();
+      subtitulo = marca + (sinInteres ? ' · sin interés' : '');
+      periodoLabel = 'por mes';
+    }
+    return { titulo, subtitulo, periodoLabel, tag };
+  }
+
+  function drawSectionTitle(ctx, txt, x, y){
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 20px -apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.fillText(txt, x, y + 22);
+    ctx.fillStyle = '#EF8702';
+    ctx.fillRect(x, y + 32, 48, 4);
+  }
+
+  function drawFooter(ctx, W, H){
+    const PAD_X = 70;
+    const lista = getLista();
+    const footH = 160;
+    const footY = H - footH;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, footY, W, footH);
+    ctx.fillStyle = '#EF8702';
+    ctx.fillRect(0, footY, W, 4);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px -apple-system,Segoe UI,Roboto,sans-serif';
+    const vendedor = ($('#waVendedor').value || '').trim();
+    const tel = ($('#waTelefono').value || '').trim();
+    const sucursal = ($('#waSucursal') ? $('#waSucursal').value : '').trim();
+    let footLine1 = vendedor ? ('Atendido por ' + vendedor) : 'Hablá con tu asesor M&A';
+    if (tel) footLine1 += '  ·  ' + tel;
+    ctx.fillText(footLine1, PAD_X, footY + 48);
+    if (sucursal) {
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.font = '500 16px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText('Sucursal ' + sucursal, PAD_X, footY + 76);
+    }
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px -apple-system,Segoe UI,Roboto,sans-serif';
+    const pie = ($('#waPie').value || '').trim() || ('Precios sujetos a stock y vigentes hasta nuevo aviso. Lista ' + lista + '.');
+    const pieY = sucursal ? 110 : 88;
+    wrapText(ctx, pie, W - 2*PAD_X).slice(0,2).forEach((l,i) => ctx.fillText(l, PAD_X, footY + pieY + i*20));
+  }
+  // Exponer drawCanvas global por compatibilidad
+  window.drawCanvas = drawCanvas;
+
+  // ---- REFRESH ALL ----
+  function refreshAll(){
+    rebuildPlanes();
+    renderItems();
+    renderChecks();
+    drawCanvas();
+  }
+
+  // ---- API global compartida ----
+  window.waAddItem = function(cod_alfa, cantidad, lista){ window.cotAdd(cod_alfa, cantidad || 1, lista); };
+  window.waSetProducto = function(cod_alfa, lista){ window.cotAdd(cod_alfa, 1, lista); };
+  window.refreshAll = refreshAll;
+  window.cotRenderers.push(refreshAll);
+
+  // ---- Logo ----
+  if (LOGO_DATAURL) {
+    logoImg = new Image();
+    logoImg.onload = drawCanvas;
+    logoImg.src = LOGO_DATAURL;
+  }
+  // ---- Cache de fotos para canvas ----
+  window._fotoCache = window._fotoCache || {};
+  function preloadFotos(){
+    const fotos = getFotos();
+    Object.keys(fotos).forEach(cod => {
+      if (!window._fotoCache[cod] || window._fotoCache[cod].src !== fotos[cod]) {
+        const img = new Image();
+        img.onload = drawCanvas;
+        img.src = fotos[cod];
+        window._fotoCache[cod] = img;
+      }
+    });
+  }
+  // Re-precargar al cambiar carrito
+  window.cotRenderers.push(preloadFotos);
+  preloadFotos();
+
+  // ---- EVENT LISTENERS ----
+  $('#waQ').addEventListener('input', renderSugs);
+  $('#waQ').addEventListener('keydown', e => { if (e.key === 'Enter' && $('#waQ').value.trim()) { e.preventDefault(); agregarItem(); } });
+  $('#waAgregar').addEventListener('click', agregarItem);
+  $('#waCargarCarpeta').addEventListener('click', () => $('#waCarpetaInput').click());
+  $('#waCarpetaInput').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    $('#waMsg').textContent = 'Cargando ' + files.length + ' archivos…';
+    const r = await loadFolderOfFotos(files);
+    $('#waMsg').textContent = 'Se asignaron ' + r.matched + ' fotos (de ' + files.length + ' archivos).';
+    e.target.value = '';
+  });
+  $('#waLimpiarFotos').addEventListener('click', () => {
+    if (confirm('¿Borrar TODAS las fotos guardadas en este navegador?')) {
+      clearAllFotos();
+      $('#waMsg').textContent = 'Fotos borradas.';
+    }
+  });
+  $('#waLista').addEventListener('change', refreshAll);
+  $('#waTildarVisibles').addEventListener('click', () => {
+    let visibles = planes.map((p,i) => ({pl:p, i:i}));
+    if (filtroCat === 'favoritos') visibles = visibles.filter(x => isFavorito(x.pl.id));
+    else if (filtroCat !== 'todos') visibles = visibles.filter(x => categoriaDePlan(x.pl) === filtroCat);
+    visibles.forEach(({i}) => seleccion.add(i));
+    renderChecks();
+    drawCanvas();
+  });
+  $('#waDestildarVisibles').addEventListener('click', () => {
+    let visibles = planes.map((p,i) => ({pl:p, i:i}));
+    if (filtroCat === 'favoritos') visibles = visibles.filter(x => isFavorito(x.pl.id));
+    else if (filtroCat !== 'todos') visibles = visibles.filter(x => categoriaDePlan(x.pl) === filtroCat);
+    visibles.forEach(({i}) => seleccion.delete(i));
+    renderChecks();
+    drawCanvas();
+  });
+  if ($('#waPromoNueva')) $('#waPromoNueva').addEventListener('click', () => promoForm(-1));
+  // Presets de botones antiguos (si están en el HTML, los conectamos; si no, ignoramos)
+  if ($('#waPresetPromos')) $('#waPresetPromos').addEventListener('click', () => applyPreset(p => p.grupo === 'Contado' || p.isPromo));
+  if ($('#waPresetSimple')) $('#waPresetSimple').addEventListener('click', () => applyPreset(p => p.grupo === 'Contado'));
+  if ($('#waPresetMA')) $('#waPresetMA').addEventListener('click', () => {
+    const favs = getFavoritos();
+    if (favs.size === 0) {
+      planes.forEach(p => {
+        if (p.grupo === 'Contado') favs.add(p.id);
+        if (p.isPromo && p.cuotas === 12) favs.add(p.id);
+      });
+      setFavoritos(favs);
+    }
+    applyPreset(p => favs.has(p.id));
+    renderChecks();
+  });
+  if ($('#waPresetTodo')) $('#waPresetTodo').addEventListener('click', () => applyPreset(function(){return true;}));
+  if ($('#waPresetClear')) $('#waPresetClear').addEventListener('click', () => applyPreset(function(){return false;}));
+  ['#waVendedor','#waTelefono','#waPie','#waCliente','#waCuitCliente'].forEach(s => $(s).addEventListener('input', drawCanvas));
+  $('#waSucursal').addEventListener('input', function(){ drawCanvas(); window.cotNotify && window.cotNotify(); });
+  $('#waDescuento').addEventListener('input', refreshAll);
+
+  function setMsg(texto, tipo){
+    const el = $('#waMsg');
+    if (!el) return;
+    el.textContent = texto;
+    el.style.padding = texto ? '10px 14px' : '0';
+    el.style.borderRadius = '8px';
+    el.style.marginTop = '8px';
+    el.style.fontSize = '13.5px';
+    el.style.fontWeight = '600';
+    el.style.transition = 'all .2s';
+    if (tipo === 'success') {
+      el.style.background = '#dcfce7'; el.style.color = '#166534'; el.style.border = '1px solid #86efac';
+    } else if (tipo === 'error') {
+      el.style.background = '#fef2f2'; el.style.color = '#991b1b'; el.style.border = '1px solid #fca5a5';
+    } else {
+      el.style.background = ''; el.style.color = 'var(--ink-mute)'; el.style.border = '0'; el.style.padding = '0';
+    }
+  }
+
+  $('#waDescargar').addEventListener('click', function() {
+    if (!window.cotItems.length) { setMsg('✗ Agregá al menos un producto antes de descargar.', 'error'); return; }
+    const cv = $('#waCanvas');
+    const cliente = ($('#waCliente').value || '').trim().replace(/[^a-z0-9]/gi,'_').slice(0,20);
+    const fname = 'Cotizacion_MA_' + (cliente || DATA.generado.replace(/-/g,'')) + '.png';
+    // 1) Intento toDataURL
+    let dataUrl = '';
+    try {
+      dataUrl = cv.toDataURL('image/png');
+    } catch(err) {
+      setMsg('✗ Canvas bloqueado (' + (err.name||'') + '). Hacé click derecho sobre la vista previa → "Guardar imagen como".', 'error');
+      return;
+    }
+    // 2) Intento descarga con <a download>
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = fname;
+    a.rel = 'noopener';
+    a.target = '_self';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    try {
+      a.click();
+    } catch(e1) {}
+    setTimeout(function(){
+      try { document.body.removeChild(a); } catch(e){}
+    }, 500);
+    setMsg('✓ Descarga iniciada: ' + fname + '. Revisá Descargas o "Mostrar barra de descargas" del navegador.', 'success');
+  });
+
+  $('#waCopiar').addEventListener('click', async () => {
+    if (!window.cotItems.length) { setMsg('✗ Agregá al menos un producto antes de copiar.', 'error'); return; }
+    const cv = $('#waCanvas');
+    setMsg('Copiando...', 'info');
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      setMsg('✗ Tu navegador no soporta copiar imágenes (probá Chrome o Edge). Usá "Descargar imagen".', 'error');
+      return;
+    }
+    try {
+      const blob = await new Promise((resolve, reject) => {
+        cv.toBlob(b => b ? resolve(b) : reject(new Error('toBlob devolvió null')), 'image/png');
+      });
+      await navigator.clipboard.write([new ClipboardItem({'image/png': blob})]);
+      setMsg('✓ Imagen copiada al portapapeles. Pegala con Ctrl+V en el chat de WhatsApp.', 'success');
+    } catch(e) {
+      const msg = (e && e.message) || String(e);
+      if (/permission|denied|secure|insecure/i.test(msg)) {
+        setMsg('✗ El navegador bloqueó copiar al abrir el archivo localmente. Usá "Descargar imagen".', 'error');
+      } else {
+        setMsg('✗ No pude copiar: ' + msg + '. Usá "Descargar imagen".', 'error');
+      }
+    }
+  });
+
+  // ---- Render inicial ----
+  renderPromos();
+  refreshAll();
+})();
+</script>
+</body>
+</html>
