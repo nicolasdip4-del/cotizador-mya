@@ -3,7 +3,7 @@ name: Actualizar Cotizador desde Zoho
 on:
   schedule:
     # 12:00 UTC = 9:00 AM Argentina (UTC-3). Ajusta si cambia el huso.
-    - cron: '0 12 * * *'
+    - cron: '13 12 * * *'
   workflow_dispatch:  # permite correr a mano desde la pestaña Actions
 
 jobs:
