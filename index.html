@@ -686,19 +686,44 @@ function buildPlanes(precio){
       total, cuotaValor: total/cuotas, recargoPct: (f - 1) * 100
     });
   });
-  // Crédito personal (cred=1) y terreno (cred=2)
+  // Crédito personal (cred=1) y terreno (cred=2).
+  // ★ FÓRMULA DE CRÉDITO (matchea Excel "CREDITO FORMAL/TERRENO"):
+  //   En el .accdb, c.cuotas = TOTAL de pagos (incluye 1 anticipo).
+  //   Todos los pagos son IGUALES (anticipo = cada cuota mensual).
+  //   N cuotas mensuales (post-anticipo) = c.cuotas - 1
+  //   Sea r = r_fin/100 (recargo financiero del Access).
+  //   cuota = precio * (1+r) / (c.cuotas + r)
+  //   anticipo = cuota
+  //   total final = c.cuotas * cuota
+  //   recargo efectivo % = (total/precio - 1) * 100  (es MENOR que r_fin porque el anticipo no paga interés)
   DATA.condven.filter(c => c.cuotas > 0 && (c.r_fin > 0 || c.cuotas <= 12)).sort((a,b)=>a.cuotas-b.cuotas).forEach(c => {
     const r = (c.r_fin || 0) / 100;
-    const f = 1 + r + (c.recargo||0)/100 - (c.descuento||0)/100;
-    const total = precio * f;
+    const ajusteFinal = 1 + (c.recargo||0)/100 - (c.descuento||0)/100;
+    const cuotasTot = Math.max(1, c.cuotas); // total de pagos (incluye anticipo)
     const nombreLow = (c.nombre||'').toLowerCase();
     let grupo = 'Condición de venta';
     if (nombreLow.includes('personal')) grupo = 'Crédito Personal (formal)';
     else if (nombreLow.includes('terreno')) grupo = 'Crédito Terreno (informal)';
-    const cuotas = Math.max(1, c.cuotas);
+
+    let cuotaValor, total, anticipo;
+    if (cuotasTot >= 2) {
+      // Excel: ROUNDUP por cuota, después total = N*cuota
+      cuotaValor = Math.ceil(precio * (1 + r) / (cuotasTot + r) * ajusteFinal);
+      total = cuotaValor * cuotasTot;
+      anticipo = cuotaValor;
+    } else {
+      // Edge: 1 sola cuota = pago único
+      total = Math.round(precio * (1 + r) * ajusteFinal);
+      cuotaValor = total;
+      anticipo = 0;
+    }
+
     planes.push({
-      id:'cv'+c.cod, grupo, nombre: c.nombre, cuotas, factor: f,
-      total, cuotaValor: total/cuotas, recargoPct: (f - 1) * 100
+      id:'cv'+c.cod, grupo, nombre: c.nombre,
+      cuotas: cuotasTot, factor: total/precio,
+      total, cuotaValor, anticipo,
+      // Recargo efectivo sobre el capital (menor que r_fin porque hay anticipo sin interés).
+      recargoPct: (total/precio - 1) * 100
     });
   });
   return planes;
@@ -1487,13 +1512,19 @@ async function cargarAccdbDesdeArchivo(file){
       const isContado = pl.cuotas <= 1;
       const conRecargo = !isContado && pl.recargoPct > 0.5;
       const valorPrincipal = isContado ? fmt(pl.total) : fmt(pl.cuotaValor) + ' / cuota';
+      // Crédito formal/informal: el primero de los pagos es anticipo (mismo valor que la cuota).
+      const catPl = categoriaDePlan(pl);
+      const conAnticipo = (catPl === 'formal' || catPl === 'informal') && pl.cuotas >= 2;
+      const etiquetaCuotas = conAnticipo
+        ? ('Anticipo + ' + (pl.cuotas - 1) + ' cuotas')
+        : (pl.cuotas + ' cuotas');
       let detalle;
       if (isContado) {
         detalle = pl.recargoPct ? (pl.recargoPct>0?'+':'') + pl.recargoPct.toFixed(1) + '%' : 'pago único';
       } else if (conRecargo) {
-        detalle = pl.cuotas + ' cuotas · ' + (pl.recargoPct>0?'+':'') + pl.recargoPct.toFixed(1) + '% [total no se muestra al cliente]';
+        detalle = etiquetaCuotas + ' · ' + (pl.recargoPct>0?'+':'') + pl.recargoPct.toFixed(1) + '% efectivo [total no se muestra al cliente]';
       } else {
-        detalle = pl.cuotas + ' cuotas sin interés · Total ' + fmt(pl.total);
+        detalle = etiquetaCuotas + ' sin interés · Total ' + fmt(pl.total);
       }
       const fav = isFavorito(pl.id);
       const star = '<button type="button" class="plan-fav-toggle" data-plan-id="'+pl.id+'" title="'+(fav?'Quitar de Planes M&A':'Marcar como Plan M&A favorito')+'" style="background:none;border:0;cursor:pointer;font-size:20px;color:'+(fav?'var(--orange)':'#cbd5e1')+';padding:0 4px;line-height:1">★</button>';
@@ -1820,20 +1851,23 @@ async function cargarAccdbDesdeArchivo(file){
     const cat = categoriaDePlan(pl);
     const isContado = pl.cuotas <= 1;
     const sinInteres = pl.recargoPct <= 0.5;
+    // En crédito formal e informal: el primer pago es ANTICIPO (mismo valor que la cuota).
+    // pl.cuotas = total de pagos. Cuotas mensuales/semanales reales = pl.cuotas - 1.
+    const cuotasMenosAnticipo = Math.max(1, pl.cuotas - 1);
     let titulo = '', subtitulo = '', periodoLabel = '', tag = '';
     if (isContado) {
       titulo = 'Pago contado';
       periodoLabel = '';
     } else if (cat === 'informal') {
       tag = 'PLAN SEMANAL';
-      titulo = pl.cuotas + ' semanas de:';
-      subtitulo = sinInteres ? 'sin interés' : '';
-      periodoLabel = 'por semana';
+      titulo = 'Anticipo + ' + cuotasMenosAnticipo + ' semanas de:';
+      subtitulo = sinInteres ? 'sin interés · todos los pagos iguales' : 'todos los pagos iguales';
+      periodoLabel = 'por pago';
     } else if (cat === 'formal') {
       tag = 'CRÉDITO PERSONAL';
-      titulo = pl.cuotas + ' cuotas mensuales de:';
-      subtitulo = sinInteres ? 'sin interés' : '';
-      periodoLabel = 'por mes';
+      titulo = 'Anticipo + ' + cuotasMenosAnticipo + ' cuotas mensuales de:';
+      subtitulo = sinInteres ? 'sin interés · todos los pagos iguales' : 'todos los pagos iguales';
+      periodoLabel = 'por pago';
     } else if (cat === 'cheque') {
       tag = 'PAGO CON CHEQUES';
       titulo = pl.cuotas + ' cheques de:';
