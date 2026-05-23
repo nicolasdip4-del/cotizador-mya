@@ -353,7 +353,7 @@
                 </div>
                 <div><button class="btn" id="waAgregar">+ Agregar</button></div>
               </div>
-              <div id="waItems" style="margin-top:14px"></div>
+              <div id="waItems" style="margin-top:14px;max-height:420px;overflow-y:auto;padding-right:6px"></div>
               <div id="waSubtotal" style="margin-top:14px"></div>
             </div>
           </div>
@@ -388,7 +388,7 @@
 
         <div class="canvas-wrap">
           <div class="card-hd" style="background:transparent;border:0;padding:0 0 8px;font-weight:600">Vista previa</div>
-          <canvas id="waCanvas" width="1080" height="1620"></canvas>
+          <canvas id="waCanvas" width="2160" height="3240"></canvas>
           <div class="wa-actions">
             <button class="btn lg orange" id="waDescargar">⬇ Descargar imagen</button>
             <button class="btn lg ghost" id="waCopiar">📋 Copiar al portapapeles</button>
@@ -1524,11 +1524,22 @@ async function cargarAccdbDesdeArchivo(file){
   }
 
   // ---- DRAW CANVAS ----
+  // Render config: canvas a 2x para imágenes el doble de nítidas en WhatsApp.
+  // El canvas físico es 2160x3240, pero todo el código de dibujo usa coordenadas
+  // lógicas 1080x1620 gracias al ctx.scale() de abajo.
+  const CANVAS_SCALE = 2;
+
   function drawCanvas(){
     const cv = $('#waCanvas');
     if (!cv) return;
     const ctx = cv.getContext('2d');
-    const W = cv.width, H = cv.height;
+    // Reseteo cualquier transform anterior y aplico el scale 2x.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(CANVAS_SCALE, CANVAS_SCALE);
+    // Mejor calidad al escalar imágenes (fotos de productos, logo).
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    const W = cv.width / CANVAS_SCALE, H = cv.height / CANVAS_SCALE;
     const PAD_X = 70;
 
     // Fondo
@@ -1613,6 +1624,17 @@ async function cargarAccdbDesdeArchivo(file){
     drawSectionTitle(ctx, 'PRODUCTOS', PAD_X, y);
     y += 50;
 
+    // === MODO COMPACTO AUTOMÁTICO ===
+    // 1-4 productos: filas grandes con foto (124px)
+    // 5-8 productos: filas medianas, sin foto (80px)
+    // 9+ productos: filas chiquitas, 1 línea (58px)
+    const numProds = window.cotItems.length;
+    const isCompact = numProds >= 5;
+    const isUltra = numProds >= 9;
+    const rowH = isUltra ? 58 : (isCompact ? 80 : 124);
+    const rowGap = isCompact ? 6 : 12;
+    const cardRadius = isCompact ? 10 : 14;
+
     let subtotal = 0;
     window.cotItems.forEach(it => {
       const p = DATA.productos.find(x => x.cod_alfa === it.cod_alfa);
@@ -1620,56 +1642,93 @@ async function cargarAccdbDesdeArchivo(file){
       const precio = p.precios[lista].p;
       const sub = precio * it.cantidad;
       subtotal += sub;
-      const rowH = 124;
       // Card
       ctx.fillStyle = '#fafafa';
-      rrect(ctx, PAD_X, y, W - 2*PAD_X, rowH, 14); ctx.fill();
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, rowH, cardRadius); ctx.fill();
       ctx.strokeStyle = '#ededed'; ctx.lineWidth = 1;
-      rrect(ctx, PAD_X, y, W - 2*PAD_X, rowH, 14); ctx.stroke();
-      // Foto
-      const fotoUrl = getFoto(p.cod_alfa);
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, rowH, cardRadius); ctx.stroke();
+      // Foto (solo en modo normal, NO compacto)
       let textX = PAD_X + 26;
-      if (fotoUrl && window._fotoCache && window._fotoCache[p.cod_alfa] && window._fotoCache[p.cod_alfa].complete) {
-        const fimg = window._fotoCache[p.cod_alfa];
-        const fx = PAD_X + 18, fy = y + 18, fs = 88;
-        ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.08)';
-        ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
-        ctx.fillStyle = '#fff';
-        rrect(ctx, fx, fy, fs, fs, 12); ctx.fill();
-        ctx.restore();
-        const sw = fimg.width >= fimg.height ? fimg.height : fimg.width;
-        const sh = sw;
-        const sx = (fimg.width - sw) / 2;
-        const sy = (fimg.height - sh) / 2;
-        ctx.save();
-        rrect(ctx, fx, fy, fs, fs, 12); ctx.clip();
-        ctx.drawImage(fimg, sx, sy, sw, sh, fx, fy, fs, fs);
-        ctx.restore();
-        ctx.strokeStyle = '#e5e5e5'; ctx.lineWidth = 1;
-        rrect(ctx, fx, fy, fs, fs, 12); ctx.stroke();
-        textX = fx + fs + 24;
+      if (!isCompact) {
+        const fotoUrl = getFoto(p.cod_alfa);
+        if (fotoUrl && window._fotoCache && window._fotoCache[p.cod_alfa] && window._fotoCache[p.cod_alfa].complete) {
+          const fimg = window._fotoCache[p.cod_alfa];
+          const fx = PAD_X + 18, fy = y + 18, fs = 88;
+          ctx.save();
+          ctx.shadowColor = 'rgba(0,0,0,0.08)';
+          ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+          ctx.fillStyle = '#fff';
+          rrect(ctx, fx, fy, fs, fs, 12); ctx.fill();
+          ctx.restore();
+          const sw = fimg.width >= fimg.height ? fimg.height : fimg.width;
+          const sh = sw;
+          const sx = (fimg.width - sw) / 2;
+          const sy = (fimg.height - sh) / 2;
+          ctx.save();
+          rrect(ctx, fx, fy, fs, fs, 12); ctx.clip();
+          ctx.drawImage(fimg, sx, sy, sw, sh, fx, fy, fs, fs);
+          ctx.restore();
+          ctx.strokeStyle = '#e5e5e5'; ctx.lineWidth = 1;
+          rrect(ctx, fx, fy, fs, fs, 12); ctx.stroke();
+          textX = fx + fs + 24;
+        }
       }
-      // Detalle producto
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 22px -apple-system,Segoe UI,Roboto,sans-serif';
+      // Detalle + precio según modo
       const det = (p.detalle||'');
-      const detShort = det.length > 60 ? det.slice(0,58)+'…' : det;
-      ctx.fillText(detShort, textX, y + 46);
-      // Cantidad / precio
-      ctx.fillStyle = '#64748b';
-      ctx.font = '17px -apple-system,Segoe UI,Roboto,sans-serif';
-      if (ocultarPrecioProducto) {
-        ctx.fillText('Cantidad: ' + it.cantidad + ' u.', textX, y + 80);
+      if (isUltra) {
+        // 1 línea: nombre a la izq, subtotal a la der
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 17px -apple-system,Segoe UI,Roboto,sans-serif';
+        const detShort = det.length > 48 ? det.slice(0,46)+'…' : det;
+        ctx.fillText(detShort, textX, y + 24);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '13px -apple-system,Segoe UI,Roboto,sans-serif';
+        const linea2 = ocultarPrecioProducto ? (it.cantidad + ' u.') : (it.cantidad + ' u. × ' + fmt(precio));
+        ctx.fillText(linea2, textX, y + 44);
+        if (!ocultarPrecioProducto) {
+          ctx.fillStyle = '#005CA9';
+          ctx.font = 'bold 22px -apple-system,Segoe UI,Roboto,sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText(fmt(sub), W - PAD_X - 22, y + 38);
+          ctx.textAlign = 'left';
+        }
+      } else if (isCompact) {
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 19px -apple-system,Segoe UI,Roboto,sans-serif';
+        const detShort = det.length > 56 ? det.slice(0,54)+'…' : det;
+        ctx.fillText(detShort, textX, y + 32);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '14px -apple-system,Segoe UI,Roboto,sans-serif';
+        if (ocultarPrecioProducto) {
+          ctx.fillText('Cantidad: ' + it.cantidad + ' u.', textX, y + 58);
+        } else {
+          ctx.fillText(it.cantidad + ' u. × ' + fmt(precio), textX, y + 58);
+          ctx.fillStyle = '#005CA9';
+          ctx.font = 'bold 24px -apple-system,Segoe UI,Roboto,sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText(fmt(sub), W - PAD_X - 22, y + 50);
+          ctx.textAlign = 'left';
+        }
       } else {
-        ctx.fillText(it.cantidad + ' u. × ' + fmt(precio), textX, y + 80);
-        ctx.fillStyle = '#005CA9';
-        ctx.font = 'bold 28px -apple-system,Segoe UI,Roboto,sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(fmt(sub), W - PAD_X - 22, y + 70);
-        ctx.textAlign = 'left';
+        // Modo normal (1-4 productos)
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px -apple-system,Segoe UI,Roboto,sans-serif';
+        const detShort = det.length > 60 ? det.slice(0,58)+'…' : det;
+        ctx.fillText(detShort, textX, y + 46);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '17px -apple-system,Segoe UI,Roboto,sans-serif';
+        if (ocultarPrecioProducto) {
+          ctx.fillText('Cantidad: ' + it.cantidad + ' u.', textX, y + 80);
+        } else {
+          ctx.fillText(it.cantidad + ' u. × ' + fmt(precio), textX, y + 80);
+          ctx.fillStyle = '#005CA9';
+          ctx.font = 'bold 28px -apple-system,Segoe UI,Roboto,sans-serif';
+          ctx.textAlign = 'right';
+          ctx.fillText(fmt(sub), W - PAD_X - 22, y + 70);
+          ctx.textAlign = 'left';
+        }
       }
-      y += rowH + 12;
+      y += rowH + rowGap;
     });
 
     y += 12;
