@@ -374,6 +374,10 @@
                 <button class="btn ghost" id="waTildarVisibles" style="padding:6px 12px;font-size:12.5px" title="Tildar todos los planes que se ven en este filtro">✓ Tildar visibles</button>
                 <button class="btn ghost" id="waDestildarVisibles" style="padding:6px 12px;font-size:12.5px" title="Destildar los planes visibles">✗ Limpiar</button>
               </div>
+              <div style="position:relative;margin-bottom:8px">
+                <input id="waPlanesQ" type="text" placeholder="Buscar plan… ej: VISA, 12 cuotas, NARANJA" style="font-size:13px;padding:8px 36px 8px 12px">
+                <button id="waPlanesQClear" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;font-size:18px;color:var(--ink-mute);padding:0;line-height:1;display:none" title="Limpiar búsqueda">×</button>
+              </div>
               <div class="wa-checks" id="waPlanes"></div>
             </div>
           </div>
@@ -1446,6 +1450,7 @@ async function cargarAccdbDesdeArchivo(file){
 
   // ---- PLANES (checks) ----
   let filtroCat = 'todos';
+  let filtroBusqueda = '';
   function categoriaDePlan(pl){
     if (pl.grupo === 'Contado') return 'contado';
     if (pl.isPromo || /^Tarjeta/.test(pl.grupo)) return 'tarjeta';
@@ -1503,8 +1508,18 @@ async function cargarAccdbDesdeArchivo(file){
     let visibles = planes.map((p,i) => ({pl:p, i:i}));
     if (filtroCat === 'favoritos') visibles = visibles.filter(x => isFavorito(x.pl.id));
     else if (filtroCat !== 'todos') visibles = visibles.filter(x => categoriaDePlan(x.pl) === filtroCat);
+    if (filtroBusqueda) {
+      const terms = norm(filtroBusqueda).split(/\s+/).filter(Boolean);
+      visibles = visibles.filter(({pl}) => {
+        const hay = norm((pl.grupo||'') + ' ' + (pl.nombre||''));
+        return terms.every(t => hay.includes(t));
+      });
+    }
     if (!visibles.length) {
-      $('#waPlanes').innerHTML = '<div class="muted" style="font-size:12.5px;padding:14px;text-align:center">No hay planes en esta categoría.'+(filtroCat==='favoritos'?'<br>Marcá planes con ★ para que aparezcan acá.':'')+'</div>';
+      const msg = filtroBusqueda
+        ? 'Sin resultados para "<b>'+filtroBusqueda+'</b>". Probá con otro término.'
+        : 'No hay planes en esta categoría.'+(filtroCat==='favoritos'?'<br>Marcá planes con ★ para que aparezcan acá.':'');
+      $('#waPlanes').innerHTML = '<div class="muted" style="font-size:12.5px;padding:14px;text-align:center">'+msg+'</div>';
       return;
     }
     $('#waPlanes').innerHTML = visibles.map(({pl,i}) => {
@@ -1965,6 +1980,17 @@ async function cargarAccdbDesdeArchivo(file){
   preloadFotos();
 
   // ---- EVENT LISTENERS ----
+  $('#waPlanesQ').addEventListener('input', () => {
+    filtroBusqueda = $('#waPlanesQ').value;
+    $('#waPlanesQClear').style.display = filtroBusqueda ? 'block' : 'none';
+    renderChecks();
+  });
+  $('#waPlanesQClear').addEventListener('click', () => {
+    filtroBusqueda = '';
+    $('#waPlanesQ').value = '';
+    $('#waPlanesQClear').style.display = 'none';
+    renderChecks();
+  });
   $('#waQ').addEventListener('input', renderSugs);
   $('#waQ').addEventListener('keydown', e => { if (e.key === 'Enter' && $('#waQ').value.trim()) { e.preventDefault(); agregarItem(); } });
   $('#waAgregar').addEventListener('click', agregarItem);
