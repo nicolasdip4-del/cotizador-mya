@@ -224,9 +224,6 @@
         <input type="file" id="loadAccdbInput" accept=".accdb,.mdb" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
         <span class="pill">📅 <span id="fecha"></span></span>
         <span class="pill">📦 <span id="totsku"></span> SKUs</span>
-        <button type="button" class="pill" id="refreshBtn" style="display:none;font-weight:500;cursor:pointer;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-family:inherit;font-size:inherit" title="Actualizar datos desde Zoho">
-          🔄 <span id="refreshBtnLabel">Actualizar</span>
-        </button>
       </div>
     </header>
 
@@ -413,7 +410,6 @@ const DATA = /*__DATA__*/null;
 const LOGO_DATAURL_RAW = "/*__LOGO_DATAURL__*/";
 // Bundle ESM de mdb-reader@3 embebido por actualizar.py (vacío si no se pudo descargar).
 const MDB_READER_SOURCE = /*__MDB_READER_SOURCE__*/"";
-const GH_DISPATCH_TOKEN = '/*__GH_DISPATCH_TOKEN__*/';
 
 /* ============== utilidades ============== */
 const $ = (s, p=document) => p.querySelector(s);
@@ -445,41 +441,6 @@ $('#fecha').textContent = 'Datos al ' + DATA.generado;
 $('#totsku').textContent = DATA.kpis.total_skus.toLocaleString('es-AR');
 $('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${DATA.generado}<br>Productos: ${DATA.kpis.total_skus}`;
 
-/* botón actualizar */
-if (GH_DISPATCH_TOKEN && GH_DISPATCH_TOKEN.length > 10) {
-  const refreshBtn = $('#refreshBtn');
-  refreshBtn.style.display = '';
-  refreshBtn.addEventListener('click', async () => {
-    const label = $('#refreshBtnLabel');
-    refreshBtn.disabled = true;
-    label.textContent = 'Actualizando…';
-    try {
-      const res = await fetch('https://api.github.com/repos/nicolasdip4-del/cotizador-mya/actions/workflows/refresh.yml/dispatches', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + GH_DISPATCH_TOKEN,
-          'Accept': 'application/vnd.github+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ref: 'main' }),
-      });
-      if (res.status === 204) {
-        label.textContent = 'En proceso (~60s)…';
-        setTimeout(() => {
-          label.textContent = '↺ Recargar';
-          refreshBtn.disabled = false;
-          refreshBtn.onclick = () => location.reload();
-        }, 65000);
-      } else {
-        label.textContent = 'Error ' + res.status;
-        refreshBtn.disabled = false;
-      }
-    } catch(e) {
-      label.textContent = 'Error de red';
-      refreshBtn.disabled = false;
-    }
-  });
-}
 
 /* ============== BUSCADOR ============== */
 (function buildBuscador(){

@@ -252,7 +252,7 @@ def generar_html(data, ruta_salida, dir_logo):
     html = html.replace('/*__MDB_READER_SOURCE__*/""',
                         json.dumps(cargar_mdb_reader_bundle(dir_logo)))
     html = html.replace('/*__PWD_HASH__*/', calcular_pwd_hash())
-    html = html.replace('/*__GH_DISPATCH_TOKEN__*/', os.environ.get('GH_DISPATCH_TOKEN', ''))
+
     with open(ruta_salida, 'w', encoding='utf-8') as f: f.write(html)
     print(f"OK: {ruta_salida} ({os.path.getsize(ruta_salida)//1024} KB)")
 
