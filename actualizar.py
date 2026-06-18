@@ -83,6 +83,16 @@ def min_len(d, keys):
     return min(valids) if valids else 0
 
 
+def col_lookup(d, *names):
+    """Busca una columna por cualquiera de los nombres dados (case-insensitive)."""
+    lower_map = {k.lower(): k for k in d}
+    for name in names:
+        actual = lower_map.get(name.lower())
+        if actual:
+            return d[actual]
+    return []
+
+
 def extraer_datos(ruta):
     print("Leyendo:", ruta)
     db = AccessParser(ruta)
@@ -106,12 +116,22 @@ def extraer_datos(ruta):
     print(f"  InfoGlobal: {len(listas)} listas")
 
     lp = db.parse_table('lprecio')
+    lp_cod_alfa = col_lookup(lp, 'cod_alfa')
+    lp_codlista = col_lookup(lp, 'CodLista', 'codlista')
+    lp_detalle = col_lookup(lp, 'detalle')
+    lp_linea = col_lookup(lp, 'linea_prod')
+    lp_precio = col_lookup(lp, 'precio')
+    lp_stock = col_lookup(lp, 'stock')
+    lp_iva = col_lookup(lp, 'IVA', 'iva')
+    lp_novedad = col_lookup(lp, 'Novedad', 'novedad')
+    lp_ahora3 = col_lookup(lp, 'Ahora3', 'ahora3')
+    lp_ahora6 = col_lookup(lp, 'Ahora6', 'ahora6')
     prod_idx, visto, skipped = {}, set(), 0
     n_lp = min_len(lp, ['codigo','cod_alfa','precio','stock','IVA','CodLista','detalle','linea_prod'])
     for i in range(n_lp):
         try:
-            ca = safe_get(lp.get('cod_alfa', []), i)
-            cl_raw = safe_get(lp.get('CodLista', []), i)
+            ca = safe_get(lp_cod_alfa, i)
+            cl_raw = safe_get(lp_codlista, i)
             if ca is None or cl_raw is None: skipped += 1; continue
             cl = int(cl_raw or 0)
             if not ca or (ca, cl) in visto: continue
@@ -119,17 +139,17 @@ def extraer_datos(ruta):
             if ca not in prod_idx:
                 prod_idx[ca] = {
                     'cod_alfa': ca,
-                    'detalle': safe_get(lp.get('detalle', []), i) or '',
-                    'linea': safe_get(lp.get('linea_prod', []), i) or 'SIN DEFINIR',
-                    'iva': float(safe_get(lp.get('IVA', []), i) or 0),
-                    'novedad': int(safe_get(lp.get('Novedad', []), i) or 0),
+                    'detalle': safe_get(lp_detalle, i) or '',
+                    'linea': safe_get(lp_linea, i) or 'SIN DEFINIR',
+                    'iva': float(safe_get(lp_iva, i) or 0),
+                    'novedad': int(safe_get(lp_novedad, i) or 0),
                     'precios': {},
                 }
             prod_idx[ca]['precios'][str(cl)] = {
-                'p': float(safe_get(lp.get('precio', []), i) or 0),
-                's': int(safe_get(lp.get('stock', []), i) or 0),
-                'a3': float(safe_get(lp.get('Ahora3', []), i) or 0),
-                'a6': float(safe_get(lp.get('Ahora6', []), i) or 0),
+                'p': float(safe_get(lp_precio, i) or 0),
+                's': int(safe_get(lp_stock, i) or 0),
+                'a3': float(safe_get(lp_ahora3, i) or 0),
+                'a6': float(safe_get(lp_ahora6, i) or 0),
             }
         except Exception: skipped += 1
     productos = list(prod_idx.values())

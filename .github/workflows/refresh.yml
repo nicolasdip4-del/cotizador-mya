@@ -2,15 +2,11 @@ name: Actualizar Cotizador desde Zoho
 
 on:
   schedule:
-    # 9:00 AR (UTC-3)
-    - cron: '0 12 * * *'
-    # 9:30 AR
-    - cron: '30 12 * * *'
-    # 10:00 AR
-    - cron: '0 13 * * *'
-    # 10:30 AR
-    - cron: '30 13 * * *'
-  workflow_dispatch:  # permite correr a mano desde la pestaña Actions
+    # 5:00 AR (UTC-3) - suficiente margen para cola de GH Actions
+    - cron: '0 8 * * *'
+    # 6:00 AR - backup si el primero falla
+    - cron: '0 9 * * *'
+  workflow_dispatch:
 
 jobs:
   refresh:
@@ -44,7 +40,6 @@ jobs:
         env:
           CI: 'true'
           COTIZADOR_PASSWORD: ${{ secrets.COTIZADOR_PASSWORD }}
-          GH_DISPATCH_TOKEN: ${{ secrets.GH_DISPATCH_TOKEN }}
         run: python actualizar.py Cotizador-Latest.accdb
 
       - name: Commit y push si index.html cambio
