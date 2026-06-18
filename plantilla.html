@@ -989,6 +989,15 @@ function _toNodeLikeBuffer(u8){
   return u8;
 }
 
+function _prop(r, ...names){
+  for (const n of names){
+    if (n in r) return r[n];
+    const lower = n.toLowerCase();
+    for (const k in r){ if (k.toLowerCase() === lower) return r[k]; }
+  }
+  return undefined;
+}
+
 function _num(v){
   if (v == null) return 0;
   if (typeof v === 'number') return isNaN(v) ? 0 : v;
@@ -1018,15 +1027,15 @@ function _accdbToData(reader, archivoNombre){
   const listas = [];
   ig.forEach(r => {
     try {
-      if (r.CodLista == null) return;
+      if (_prop(r, 'CodLista') == null) return;
       listas.push({
-        cod: _int(r.CodLista),
-        nombre: _str(r.NomLista),
-        desde: _fecha10(r.desde),
-        hasta: _fecha10(r.hasta),
-        facIVA: _num(r.FacIVA),
-        ahora3: _num(r.Ahora3),
-        ahora6: _num(r.Ahora6),
+        cod: _int(_prop(r, 'CodLista')),
+        nombre: _str(_prop(r, 'NomLista')),
+        desde: _fecha10(_prop(r, 'desde')),
+        hasta: _fecha10(_prop(r, 'hasta')),
+        facIVA: _num(_prop(r, 'FacIVA')),
+        ahora3: _num(_prop(r, 'Ahora3', 'ahora3')),
+        ahora6: _num(_prop(r, 'Ahora6', 'ahora6')),
       });
     } catch(e){}
   });
@@ -1037,8 +1046,8 @@ function _accdbToData(reader, archivoNombre){
   let skipped = 0;
   lp.forEach(r => {
     try {
-      const ca = r.cod_alfa;
-      const clRaw = r.CodLista;
+      const ca = _prop(r, 'cod_alfa');
+      const clRaw = _prop(r, 'CodLista', 'codlista');
       if (ca == null || clRaw == null){ skipped++; return; }
       const cl = _int(clRaw);
       if (!ca || visto.has(ca + '__' + cl)) return;
@@ -1046,18 +1055,18 @@ function _accdbToData(reader, archivoNombre){
       if (!prodIdx[ca]){
         prodIdx[ca] = {
           cod_alfa: ca,
-          detalle: _str(r.detalle),
-          linea: _str(r.linea_prod) || 'SIN DEFINIR',
-          iva: _num(r.IVA),
-          novedad: _int(r.Novedad),
+          detalle: _str(_prop(r, 'detalle')),
+          linea: _str(_prop(r, 'linea_prod')) || 'SIN DEFINIR',
+          iva: _num(_prop(r, 'IVA', 'iva')),
+          novedad: _int(_prop(r, 'Novedad', 'novedad')),
           precios: {}
         };
       }
       prodIdx[ca].precios[String(cl)] = {
-        p: _num(r.precio),
-        s: _int(r.stock),
-        a3: _num(r.Ahora3),
-        a6: _num(r.Ahora6),
+        p: _num(_prop(r, 'precio')),
+        s: _int(_prop(r, 'stock')),
+        a3: _num(_prop(r, 'Ahora3', 'ahora3')),
+        a6: _num(_prop(r, 'Ahora6', 'ahora6')),
       };
     } catch(e){ skipped++; }
   });
