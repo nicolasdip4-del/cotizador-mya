@@ -414,7 +414,7 @@
 
         <div class="canvas-wrap">
           <div class="card-hd" style="background:transparent;border:0;padding:0 0 8px;font-weight:600">Vista previa</div>
-          <canvas id="waCanvas" width="2160" height="3240"></canvas>
+          <canvas id="waCanvas" width="3240" height="4860"></canvas>
           <div class="wa-actions">
             <button class="btn lg orange" id="waDescargar">⬇ Descargar imagen</button>
             <button class="btn lg ghost" id="waCopiar">📋 Copiar al portapapeles</button>
@@ -1728,9 +1728,9 @@ async function cargarAccdbDesdeArchivo(file){
 
   // ---- DRAW CANVAS ----
   // Render config: canvas a 2x para imágenes el doble de nítidas en WhatsApp.
-  // El canvas físico es 2160x3240, pero todo el código de dibujo usa coordenadas
+  // El canvas físico es 3240x4860, pero todo el código de dibujo usa coordenadas
   // lógicas 1080x1620 gracias al ctx.scale() de abajo.
-  const CANVAS_SCALE = 2;
+  const CANVAS_SCALE = 3;
 
   function drawCanvas(){
     const cv = $('#waCanvas');
