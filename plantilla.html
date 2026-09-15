@@ -293,8 +293,12 @@
             <div class="card-bd">
               <div class="row">
                 <div style="flex:1;min-width:160px">
-                  <label class="lbl">Lista de precio</label>
+                  <label class="lbl">Lista tarjeta / financiado</label>
                   <select id="waLista"></select>
+                </div>
+                <div style="flex:1;min-width:160px">
+                  <label class="lbl">Lista contado</label>
+                  <select id="waListaContado"></select>
                 </div>
                 <div style="flex:1;min-width:160px">
                   <label class="lbl">Vendedor / Asesor</label>
@@ -374,6 +378,15 @@
                 <button class="btn ghost" id="waTildarVisibles" style="padding:6px 12px;font-size:12.5px" title="Tildar todos los planes que se ven en este filtro">✓ Tildar visibles</button>
                 <button class="btn ghost" id="waDestildarVisibles" style="padding:6px 12px;font-size:12.5px" title="Destildar los planes visibles">✗ Limpiar</button>
               </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:12.5px;color:var(--ink-mute)">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                  <input type="checkbox" id="waOcultarAltoRecargo" style="width:auto">
+                  Ocultar planes con recargo mayor a
+                </label>
+                <input type="number" id="waUmbralRecargo" value="25" min="0" max="200" style="width:60px;padding:4px 6px;font-size:12.5px">
+                <span>%</span>
+                <small style="color:var(--ink-faint)">(favoritos y ya tildados siempre se ven)</small>
+              </div>
               <div style="position:relative;margin-bottom:8px">
                 <input id="waPlanesQ" type="text" placeholder="Buscar plan… ej: VISA, 12 cuotas, NARANJA" style="font-size:13px;padding:8px 36px 8px 12px">
                 <button id="waPlanesQClear" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;font-size:18px;color:var(--ink-mute);padding:0;line-height:1;display:none" title="Limpiar búsqueda">×</button>
@@ -382,8 +395,17 @@
             </div>
           </div>
 
+          <div class="card" style="margin-bottom:14px">
+            <div class="card-hd">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+                <input type="checkbox" id="waMostrarRequisitos" style="width:auto">
+                6. Incluir requisitos de crédito en el flyer
+              </label>
+            </div>
+          </div>
+
           <div class="card">
-            <div class="card-hd">6. Mensaje al pie (opcional)</div>
+            <div class="card-hd">7. Mensaje al pie (opcional)</div>
             <div class="card-bd">
               <input id="waPie" type="text" placeholder="ej. Stock sujeto a disponibilidad. Vigencia hasta fin de mes.">
             </div>
@@ -436,8 +458,23 @@ $$('#nav button').forEach(b => b.addEventListener('click', () => {
 }));
 
 /* header */
+function actualizarFechaBadge(){
+  const el = document.getElementById('fecha');
+  if (!el || !DATA.generado) return;
+  const [y,m,d] = DATA.generado.split('-');
+  el.textContent = d + '-' + m + '-' + y;
+  const hoy = new Date();
+  const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth()+1).padStart(2,'0') + '-' + String(hoy.getDate()).padStart(2,'0');
+  const pill = el.closest('.pill');
+  if (pill) {
+    const esHoy = DATA.generado === hoyStr;
+    pill.style.background = esHoy ? '#e6f6ed' : '';
+    pill.style.borderColor = esHoy ? '#0a6a4a' : '';
+    pill.style.color = esHoy ? '#0a6a4a' : '';
+  }
+}
 $('#origen').textContent = DATA.archivo_origen;
-$('#fecha').textContent = 'Datos al ' + DATA.generado;
+actualizarFechaBadge();
 $('#totsku').textContent = DATA.kpis.total_skus.toLocaleString('es-AR');
 $('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${DATA.generado}<br>Productos: ${DATA.kpis.total_skus}`;
 
@@ -661,24 +698,69 @@ function buildPromosPlanes(precioTotal){
   });
 }
 
+/* ============== PLANES DE TARJETA CONFIRMADOS (no vienen del .accdb) ==============
+   Reemplaza la tabla "Tarjetas" del .accdb (162 filas por banco, sin curar) por la
+   lista de 9 marcas/grupos que Nicolas confirmó para el PDF de clientes
+   ("Planes de Tarjetas MyA.pdf"). Regla de negocio confirmada: en Naranja/SuCrédito/
+   Tarjeta Sol el campo "descuento" negativo del Excel origen ES un descuento real
+   (no un recargo) — igual que en ese PDF. */
+const PLANES_TARJETAS_CONFIRMADAS = [{"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 1 Cuotas", "recargo": 0, "descuento": 0}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 2 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.2}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 3 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.2}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 4 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.15}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 5 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.15}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 6 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.15}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 7 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.1}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 8 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.1}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 9 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.1}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 10 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.05}, {"plan": "Visa  (4001) y Master (4015) Bancarizada (Otros Bancos) - 11 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.05}, {"plan": "Visa y Master Bancarizada (Otros Bancos) - 12 Cuotas - Sin Interes", "recargo": 0, "descuento": 0.05}, {"plan": "Visa y Master Bancarizada (Otros Bancos) - 18 Cuotas - Sin Recargo", "recargo": 0, "descuento": 0}, {"plan": "Visa y Master No Bancarizada - 1 Cuotas", "recargo": 0, "descuento": 0}, {"plan": "Visa y Master No Bancarizada - 3 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.2}, {"plan": "Visa y Master No Bancarizada - 6 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.15}, {"plan": "Visa y Master No Bancarizada - 9 Cuotas - Con Descuento", "recargo": 0, "descuento": 0.1}, {"plan": "Visa y Master No Bancarizada - 12 Cuotas - Sin interes", "recargo": 0, "descuento": 0.05}, {"plan": "Visa y Master No Bancarizada - 18 Cuotas - Sin Recargo", "recargo": 0, "descuento": 0}, {"plan": "American Express (NO BANCARIA) - 1 cuotas", "recargo": 0, "descuento": 0}, {"plan": "American Express (NO BANCARIA) - 3 cuotas - Sin Interes", "recargo": 0, "descuento": 0.2}, {"plan": "American Express (NO BANCARIA) - 6 cuotas - Sin Interes", "recargo": 0, "descuento": 0.15}, {"plan": "American Express (NO BANCARIA) - 9 cuotas - Sin interes", "recargo": 0, "descuento": 0.1}, {"plan": "American Express (NO BANCARIA) - 12 cuotas - Sin interes", "recargo": 0, "descuento": 0.05}, {"plan": "American Express (NO BANCARIA) - 18 cuotas - Sin Recargo", "recargo": 0, "descuento": 0}, {"plan": "American Express Bco Santander - 1 cuotas - Sin Interes", "recargo": 0, "descuento": 0}, {"plan": "American Express Bco Santander - 3 cuotas - Sin Interes", "recargo": 0, "descuento": 0.2}, {"plan": "American Express Bco Santander - 6 cuotas - Sin Interes", "recargo": 0, "descuento": 0.15}, {"plan": "American Express Bco Santander - 9 cuotas - Sin Interes", "recargo": 0, "descuento": 0.1}, {"plan": "American Express Bco Santander - 12 cuotas - Sin Interes", "recargo": 0, "descuento": 0.05}, {"plan": "American Express Bco Santander - 18 cuotas - Sin Interes", "recargo": 0, "descuento": 0}, {"plan": "Cabal - 1 cuotas - Sin Interes", "recargo": 0, "descuento": 0}, {"plan": "Cabal - 3 cuotas - Sin Interes", "recargo": 0, "descuento": 0.2}, {"plan": "Cabal - 6 cuotas - Sin Interes", "recargo": 0, "descuento": 0.1}, {"plan": "Cabal - 9 cuotas - Sin Interes", "recargo": 0, "descuento": 0.15}, {"plan": "Cabal - 12 cuotas - Sin Interes", "recargo": 0, "descuento": 0.05}, {"plan": "Cabal - 18 cuotas - Sin Recargo", "recargo": 0, "descuento": 0}, {"plan": "Naranja - 1 Cuota", "recargo": 0, "descuento": 0}, {"plan": "Naranja - Plan Z - Con Descuento", "recargo": 0, "descuento": -0.2}, {"plan": "Naranja - Cuota 6 - Con Descuento", "recargo": 0, "descuento": -0.15}, {"plan": "Naranja - Cuota 9 - Con Descuento", "recargo": 0, "descuento": -0.1}, {"plan": "Naranja - Cuota 12 - Sin interes", "recargo": 0, "descuento": -0.05}, {"plan": "SuCredito - Cuotas 1 - Sin interes", "recargo": 0, "descuento": 0}, {"plan": "SuCredito - Cuotas 3 - Sin interes", "recargo": 0, "descuento": -0.2}, {"plan": "SuCredito - Cuotas 6 - Con interes", "recargo": 0.05, "descuento": 0}, {"plan": "SuCredito - Cuotas 9 - Con Recargo", "recargo": 0.1, "descuento": 0}, {"plan": "SuCredito - Cuotas 10 - Con Recargo", "recargo": 0.15, "descuento": 0}, {"plan": "SuCredito - Cuotas 12 - Con Recargo", "recargo": 0.2, "descuento": 0}, {"plan": "Credicash - Cuotas 3 - Sin Interes", "recargo": 0, "descuento": 0}, {"plan": "Credicash - Cuotas 6 - Sin Interes", "recargo": 0, "descuento": 0}, {"plan": "Credicash - Cuotas 9 - Con Recargo", "recargo": 0.15, "descuento": 0}, {"plan": "Tarjeta Sol - Cuotas 3 - Con Descuento", "recargo": 0, "descuento": -0.2}, {"plan": "Tarjeta Sol - Cuotas 6 - Con Descuento", "recargo": 0, "descuento": -0.15}, {"plan": "Tarjeta Sol - Cuotas 9 - Con Descuento", "recargo": 0, "descuento": -0.1}, {"plan": "Tarjeta Sol - Cuotas 12 - Sin Interes", "recargo": 0, "descuento": -0.05}, {"plan": "Tarjeta CentroCard - Cuota 1 - Sin Interes", "recargo": 0, "descuento": 0}, {"plan": "Tarjeta CentroCard - Cuota 3 - Sin Interes", "recargo": 0, "descuento": 0}, {"plan": "Tarjeta CentroCard - Cuota 6 - Sin Interes", "recargo": 0, "descuento": 0}, {"plan": "Tarjeta CentroCard - Cuota 9", "recargo": 0.15, "descuento": 0}, {"plan": "Tarjeta CentroCard - Cuota 12", "recargo": 0.2, "descuento": 0}];
+
+function marcaDeTarjetaConfirmada(plan) {
+  const p = plan.toLowerCase();
+  if (p.includes('no bancarizada')) return 'Visa / Master (no bancarizada)';
+  if (p.includes('bancarizada')) return 'Visa / Master (bancarizada)';
+  if (p.includes('santander')) return 'Amex Banco Santander';
+  if (p.includes('american express')) return 'American Express';
+  if (p.includes('cabal')) return 'Cabal';
+  if (p.includes('naranja')) return 'Naranja';
+  if (p.includes('sucredito')) return 'SuCrédito';
+  if (p.includes('credicash')) return 'Credicash';
+  if (p.includes('tarjeta sol')) return 'Tarjeta Sol';
+  if (p.includes('centrocard')) return 'CentroCard';
+  return 'Otros';
+}
+function etiquetaCuotaConfirmada(plan) {
+  const m = plan.match(/(\d+)\s*cuotas?/i) || plan.match(/cuotas?\s*(\d+)/i);
+  if (m) return m[1] + (m[1] === '1' ? ' cuota' : ' cuotas');
+  return plan.split(' - ').slice(1).join(' ');
+}
+function cuotaNumConfirmada(plan) {
+  const m = plan.match(/(\d+)\s*cuotas?/i) || plan.match(/cuotas?\s*(\d+)/i);
+  if (m) return parseInt(m[1], 10);
+  if (/plan z/i.test(plan)) return 3; // Naranja nombra "Plan Z" a su plan de 3 cuotas
+  return 1;
+}
+
 /* ============== Helpers compartidos: planes de pago ============== */
-function buildPlanes(precio){
+function buildPlanes(precio, precioContado){
+  if (precioContado == null) precioContado = precio;
   const planes = [];
-  planes.push({id:'contado', grupo:'Contado', nombre:'Contado / Efectivo', cuotas:1, factor:1, total:precio, cuotaValor:precio});
+  planes.push({id:'contado', grupo:'Contado', nombre:'Contado / Efectivo', cuotas:1, factor:1, total:precioContado, cuotaValor:precioContado});
   // Promociones del mes (vienen primero después de contado)
   buildPromosPlanes(precio).forEach(p => planes.push(p));
-  // Tarjetas (ordenadas por marca y cuotas)
-  DATA.tarjetas
-    .filter(t => (t.marca||'').toLowerCase() !== 'ninguno' && (t.marca||'').toLowerCase() !== 'multitarjeta')
-    .sort((a,b) => (a.marca||'').localeCompare(b.marca||'') || a.cuotas - b.cuotas)
-    .forEach(t => {
-      const total = precio * (t.rec || 1);
-      const cuotas = Math.max(1, t.cuotas || 1);
+  // Tarjetas: lista confirmada (no accdb) — ver PLANES_TARJETAS_CONFIRMADAS arriba.
+  PLANES_TARJETAS_CONFIRMADAS
+    .map((p, idx) => ({p, idx, marca: marcaDeTarjetaConfirmada(p.plan), cuotas: cuotaNumConfirmada(p.plan)}))
+    .sort((a,b) => a.marca.localeCompare(b.marca) || a.cuotas - b.cuotas)
+    .forEach(({p, idx, marca, cuotas}) => {
+      let total, esDescuento;
+      if (p.recargo > 0) {
+        total = precio * (1 + p.recargo);
+        esDescuento = false;
+      } else if (p.descuento !== 0) {
+        total = precio * (1 - Math.abs(p.descuento)); // regla confirmada: descuento negativo del Excel = descuento real
+        esDescuento = true;
+      } else {
+        total = precio;
+        esDescuento = false;
+      }
       planes.push({
-        id: 'tj'+t.id, grupo: 'Tarjeta · ' + (t.marca||'').trim(),
-        nombre: (t.plan || (cuotas+' cuotas')) + (t.banco ? ' · ' + t.banco : ''),
-        cuotas, factor: t.rec || 1, total, cuotaValor: total / cuotas,
-        recargoPct: ((t.rec || 1) - 1) * 100
+        id: 'tjc'+idx, grupo: 'Tarjeta · ' + marca,
+        nombre: etiquetaCuotaConfirmada(p.plan),
+        cuotas, factor: total/precio, total, cuotaValor: total / cuotas,
+        recargoPct: (total/precio - 1) * 100,
+        esDescuento
       });
     });
   // Cheques
@@ -1183,7 +1265,7 @@ async function cargarAccdbDesdeArchivo(file){
     DATA.listas.forEach(l => { LISTAS[l.cod] = l; });
 
     // Re-render: actualizo header + sidebar + selects + items que pudieran quedar inválidos
-    const fechaEl = document.getElementById('fecha'); if (fechaEl) fechaEl.textContent = 'Datos al ' + DATA.generado;
+    actualizarFechaBadge();
     const totskuEl = document.getElementById('totsku'); if (totskuEl) totskuEl.textContent = DATA.kpis.total_skus.toLocaleString('es-AR');
     const origenEl = document.getElementById('origen'); if (origenEl) origenEl.textContent = DATA.archivo_origen;
     const metaEl = document.getElementById('meta');
@@ -1197,6 +1279,14 @@ async function cargarAccdbDesdeArchivo(file){
       if (LISTAS[prev]) waLista.value = prev;
       else if (LISTAS[3767]) waLista.value = '3767';
       else if (LISTAS[3020]) waLista.value = '3020';
+    }
+    const waListaContado = document.getElementById('waListaContado');
+    if (waListaContado){
+      const prevC = waListaContado.value;
+      waListaContado.innerHTML = DATA.listas.map(l => '<option value="'+l.cod+'">'+l.cod+' — '+l.nombre+'</option>').join('');
+      if (LISTAS[prevC]) waListaContado.value = prevC;
+      else if (LISTAS[1000]) waListaContado.value = '1000';
+      else waListaContado.value = waLista ? waLista.value : '';
     }
     // Saco del carrito los productos que ya no existen en la nueva base
     if (Array.isArray(window.cotItems)){
@@ -1260,14 +1350,29 @@ async function cargarAccdbDesdeArchivo(file){
   const optHtml = DATA.listas.map(l => '<option value="'+l.cod+'">'+l.cod+' — '+l.nombre+'</option>').join('');
   $('#waLista').innerHTML = optHtml;
   if (LISTAS[3767]) $('#waLista').value = '3767'; else if (LISTAS[3020]) $('#waLista').value = '3020';
+  $('#waListaContado').innerHTML = optHtml;
+  if (LISTAS[1000]) $('#waListaContado').value = '1000'; else $('#waListaContado').value = $('#waLista').value;
 
   // ---- Estado local de la pantalla ----
   let planes = [];
   let seleccion = new Set();
   let logoImg = null;
 
+  // Ocultar planes con recargo alto: on por defecto, persistido.
+  const OCULTAR_RECARGO_KEY = 'mya_ocultar_alto_recargo';
+  const UMBRAL_RECARGO_KEY = 'mya_umbral_recargo';
+  if ($('#waOcultarAltoRecargo')) {
+    const guardado = localStorage.getItem(OCULTAR_RECARGO_KEY);
+    $('#waOcultarAltoRecargo').checked = guardado === null ? true : guardado === '1';
+  }
+  if ($('#waUmbralRecargo')) {
+    const umbralGuardado = localStorage.getItem(UMBRAL_RECARGO_KEY);
+    if (umbralGuardado) $('#waUmbralRecargo').value = umbralGuardado;
+  }
+
   // ---- Helpers ----
   function getLista(){ return +$('#waLista').value; }
+  function getListaContado(){ const el = $('#waListaContado'); return el && el.value ? +el.value : getLista(); }
 
   function calcSubtotalBruto(){
     const lista = getLista();
@@ -1278,18 +1383,38 @@ async function cargarAccdbDesdeArchivo(file){
     });
     return total;
   }
+  function calcSubtotalContadoBruto(){
+    const listaC = getListaContado();
+    const listaF = getLista();
+    let total = 0;
+    window.cotItems.forEach(it => {
+      const p = DATA.productos.find(x => x.cod_alfa === it.cod_alfa);
+      if (!p) return;
+      if (p.precios[listaC]) total += p.precios[listaC].p * it.cantidad;
+      else if (p.precios[listaF]) total += p.precios[listaF].p * it.cantidad; // fallback: no está en la lista contado
+    });
+    return total;
+  }
+  function contarFaltantesContado(){
+    const listaC = getListaContado();
+    return window.cotItems.filter(it => {
+      const p = DATA.productos.find(x => x.cod_alfa === it.cod_alfa);
+      return p && !p.precios[listaC];
+    }).length;
+  }
   function getDescuentoPct(){
     const v = parseFloat($('#waDescuento') ? $('#waDescuento').value : 0) || 0;
     return Math.min(100, Math.max(0, v));
   }
   function calcSubtotalContado(){
-    return calcSubtotalBruto() * (1 - getDescuentoPct()/100);
+    return calcSubtotalContadoBruto() * (1 - getDescuentoPct()/100);
   }
 
   function rebuildPlanes(){
-    const sub = calcSubtotalContado();
-    if (sub <= 0) { planes = []; return; }
-    planes = buildPlanes(sub);
+    const subFinanciado = calcSubtotalBruto() * (1 - getDescuentoPct()/100);
+    const subContado = calcSubtotalContado();
+    if (subFinanciado <= 0 && subContado <= 0) { planes = []; return; }
+    planes = buildPlanes(subFinanciado, subContado);
   }
 
   function wrapText(ctx, text, maxWidth){
@@ -1392,10 +1517,13 @@ async function cargarAccdbDesdeArchivo(file){
 
     const sub = calcSubtotalContado();
     const pctDesc = getDescuentoPct();
-    const bruto = calcSubtotalBruto();
+    const bruto = calcSubtotalContadoBruto();
     const ahorro = bruto - sub;
     const descLine = pctDesc > 0 ? '<div style="font-size:12px;color:var(--ink-mute);margin-top:4px"><s>'+fmt(bruto)+'</s> · −'+pctDesc.toFixed(1)+'% ('+fmt(ahorro)+' de descuento)</div>' : '';
-    $('#waSubtotal').innerHTML = '<div style="padding:14px 18px;background:var(--accent-soft);border-radius:8px;border:1px solid #d6e4ef;display:flex;justify-content:space-between;align-items:center"><div><div class="lbl-big">Total contado</div><div style="color:var(--accent);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums">'+fmt(sub)+'</div>'+descLine+'</div><div style="color:var(--ink-mute);font-size:12px;text-align:right">'+window.cotItems.length+' producto'+(window.cotItems.length===1?'':'s')+'<br>'+totUnid+' unidad'+(totUnid===1?'':'es')+'</div></div>';
+    const faltCont = contarFaltantesContado();
+    const listaContadoCod = getListaContado();
+    const faltLine = faltCont > 0 ? '<div style="font-size:11px;color:#b45309;margin-top:4px">⚠ '+faltCont+' producto'+(faltCont===1?'':'s')+' sin precio en lista '+listaContadoCod+' — se usó la lista tarjeta/financiado como referencia.</div>' : '';
+    $('#waSubtotal').innerHTML = '<div style="padding:14px 18px;background:var(--accent-soft);border-radius:8px;border:1px solid #d6e4ef;display:flex;justify-content:space-between;align-items:center"><div><div class="lbl-big">Total contado <span style="font-weight:400;font-size:11px;color:var(--ink-mute)">· lista '+listaContadoCod+'</span></div><div style="color:var(--accent);font-weight:700;font-size:24px;font-variant-numeric:tabular-nums">'+fmt(sub)+'</div>'+descLine+faltLine+'</div><div style="color:var(--ink-mute);font-size:12px;text-align:right">'+window.cotItems.length+' producto'+(window.cotItems.length===1?'':'s')+'<br>'+totUnid+' unidad'+(totUnid===1?'':'es')+'</div></div>';
   }
 
   // ---- PROMOS ----
@@ -1525,6 +1653,18 @@ async function cargarAccdbDesdeArchivo(file){
         return terms.every(t => hay.includes(t));
       });
     }
+    let ocultosPorRecargo = 0;
+    if ($('#waOcultarAltoRecargo') && $('#waOcultarAltoRecargo').checked) {
+      const umbral = parseFloat($('#waUmbralRecargo') ? $('#waUmbralRecargo').value : 25);
+      const umbralOk = isNaN(umbral) ? 25 : umbral;
+      const antesLen = visibles.length;
+      visibles = visibles.filter(({pl,i}) => {
+        if (pl.cuotas <= 1) return true; // contado nunca se oculta
+        if (isFavorito(pl.id) || seleccion.has(i)) return true;
+        return (pl.recargoPct || 0) <= umbralOk;
+      });
+      ocultosPorRecargo = antesLen - visibles.length;
+    }
     if (!visibles.length) {
       const msg = filtroBusqueda
         ? 'Sin resultados para "<b>'+filtroBusqueda+'</b>". Probá con otro término.'
@@ -1544,21 +1684,28 @@ async function cargarAccdbDesdeArchivo(file){
         ? ('Anticipo + ' + (pl.cuotas - 1) + ' cuotas')
         : (pl.cuotas + ' cuotas');
       let detalle;
+      let estadoBadge = '';
       if (isContado) {
         detalle = pl.recargoPct ? (pl.recargoPct>0?'+':'') + pl.recargoPct.toFixed(1) + '%' : 'pago único';
+      } else if (pl.esDescuento) {
+        detalle = etiquetaCuotas + ' · Total ' + fmt(pl.total);
+        estadoBadge = '<span class="badge good" style="margin-left:6px">Descuento ' + Math.abs(pl.recargoPct).toFixed(1) + '%</span>';
       } else if (conRecargo) {
         detalle = etiquetaCuotas + ' · ' + (pl.recargoPct>0?'+':'') + pl.recargoPct.toFixed(1) + '% efectivo [total no se muestra al cliente]';
+        estadoBadge = '<span class="badge bad" style="margin-left:6px">Recargo +' + pl.recargoPct.toFixed(1) + '%</span>';
       } else {
         detalle = etiquetaCuotas + ' sin interés · Total ' + fmt(pl.total);
+        estadoBadge = '<span class="badge mute" style="margin-left:6px">Sin interés</span>';
       }
       const fav = isFavorito(pl.id);
       const star = '<button type="button" class="plan-fav-toggle" data-plan-id="'+pl.id+'" title="'+(fav?'Quitar de Planes M&A':'Marcar como Plan M&A favorito')+'" style="background:none;border:0;cursor:pointer;font-size:20px;color:'+(fav?'var(--orange)':'#cbd5e1')+';padding:0 4px;line-height:1">★</button>';
+      const colorValor = pl.esDescuento ? '#0a6a4a' : 'var(--accent)';
       return '<label class="wa-check"><input type="checkbox" data-i="'+i+'" '+(seleccion.has(i)?'checked':'')+'>'+
         star+
-        '<div><div><b>'+pl.grupo+'</b>'+promoBadge+' · '+pl.nombre+'</div>'+
+        '<div><div><b>'+pl.grupo+'</b>'+promoBadge+(isContado?'':estadoBadge)+' · '+pl.nombre+'</div>'+
         '<small class="muted">'+detalle+'</small></div>'+
-        '<span class="num"><b style="color:var(--accent)">'+valorPrincipal+'</b></span></label>';
-    }).join('');
+        '<span class="num"><b style="color:'+colorValor+'">'+valorPrincipal+'</b></span></label>';
+    }).join('') + (ocultosPorRecargo > 0 ? '<div class="muted" style="font-size:11.5px;padding:8px 4px;text-align:center">+ '+ocultosPorRecargo+' plan'+(ocultosPorRecargo===1?'':'es')+' con recargo alto oculto'+(ocultosPorRecargo===1?'':'s')+' · destildá "Ocultar planes…" arriba para verlos</div>' : '');
     $$('#waPlanes .plan-fav-toggle').forEach(b => b.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
       toggleFavorito(b.dataset.planId);
@@ -1603,34 +1750,38 @@ async function cargarAccdbDesdeArchivo(file){
     ctx.fillRect(0,0,W,H);
 
     // ---- HEADER ----
-    const headerH = 240;
+    const headerH = 200;
     const grad = ctx.createLinearGradient(0,0,W,0);
     grad.addColorStop(0,'#005CA9'); grad.addColorStop(1,'#0d47a1');
     ctx.fillStyle = grad;
     ctx.fillRect(0,0,W,headerH);
 
-    // Logo circular blanco
-    const logoSize = 130;
-    const logoX = PAD_X, logoY = (headerH - logoSize) / 2;
+    // Logo (blanco, sin fondo) + marca + CUIT, compacto a un costado
+    const logoH = 66;
+    const logoW = (logoImg && logoImg.naturalWidth) ? logoH * (logoImg.naturalWidth / logoImg.naturalHeight) : logoH;
+    const logoX = PAD_X, logoY = (headerH - logoH) / 2;
     if (logoImg && logoImg.complete) {
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(logoX+logoSize/2, logoY+logoSize/2, logoSize/2+10, 0, Math.PI*2); ctx.fill();
-      ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+      ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
     }
-
-    // Texto M&A + fecha
-    const txtX = logoX + logoSize + 30;
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 52px -apple-system,Segoe UI,Roboto,sans-serif';
-    ctx.textBaseline = 'top';
-    ctx.fillText('M&A', txtX, logoY + 0);
-    ctx.font = '500 17px -apple-system,Segoe UI,Roboto,sans-serif';
+    const txtX = logoX + logoW + 22;
     ctx.fillStyle = 'rgba(255,255,255,.95)';
-    ctx.fillText('EQUIPAMIENTOS COMERCIALES', txtX, logoY + 58);
+    ctx.font = '700 14px -apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.textBaseline = 'top';
+    ctx.fillText('M&A EQUIPAMIENTOS', txtX, logoY + 14);
+    ctx.fillText('COMERCIALES', txtX, logoY + 32);
+    ctx.font = '300 13px -apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.68)';
+    ctx.fillText('CUIT 33-70240016-9', txtX, logoY + 56);
+
+    // Título centrado
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 46px -apple-system,Segoe UI,Roboto,sans-serif';
+    ctx.fillText('COTIZACIÓN', W/2, headerH/2 - 30);
     ctx.font = '300 15px -apple-system,Segoe UI,Roboto,sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,.70)';
-    ctx.fillText('CUIT: 33-70240016-9', txtX, logoY + 86);
-    ctx.fillText('Cotización · ' + DATA.generado.split('-').reverse().join('/'), txtX, logoY + 108);
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.fillText(DATA.generado.split('-').reverse().join('/'), W/2, headerH/2 + 28);
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
 
     // Stripe naranja
@@ -1793,27 +1944,32 @@ async function cargarAccdbDesdeArchivo(file){
     const seleccionados = seleccionadosTmp;
     const tieneContado = tieneContadoTmp;
     if (tieneContado) {
-      const boxH = 110;
-      ctx.fillStyle = '#eef5fb';
-      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 12); ctx.fill();
-      ctx.fillStyle = '#005CA9'; ctx.fillRect(PAD_X, y, 6, boxH);
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '600 14px -apple-system,Segoe UI,Roboto,sans-serif';
-      ctx.fillText('TOTAL', PAD_X + 30, y + 36);
+      const contadoPlanSel = seleccionados.find(p => p && p.grupo === 'Contado');
+      const totalContado = contadoPlanSel ? contadoPlanSel.total : subtotal;
+      const boxH = 84;
+      ctx.fillStyle = '#f4f8fb';
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 14); ctx.fill();
+      ctx.strokeStyle = '#dbe6f0'; ctx.lineWidth = 1.5;
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 14); ctx.stroke();
+      ctx.fillStyle = '#5b7a94';
+      ctx.font = '700 13px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText('TOTAL CONTADO', PAD_X + 28, y + 30);
       ctx.fillStyle = '#005CA9';
-      ctx.font = 'bold 56px -apple-system,Segoe UI,Roboto,sans-serif';
-      ctx.fillText(fmt(subtotal), PAD_X + 30, y + 92);
-      y += boxH + 28;
+      ctx.font = 'bold 36px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText(fmt(totalContado), PAD_X + 28, y + 66);
+      y += boxH + 24;
     }
 
     // ---- PLANES ----
     const planesFinanciados = seleccionados.filter(p => p && p.grupo !== 'Contado');
+    const mostrarReq = $('#waMostrarRequisitos') && $('#waMostrarRequisitos').checked && planesFinanciados.length > 0;
+    const REQ_BLOCK_H = 130;
     if (planesFinanciados.length) {
       drawSectionTitle(ctx, tieneContado ? 'OPCIONES DE FINANCIACIÓN' : 'PLAN DE PAGO', PAD_X, y);
       y += 50;
       const itemH = 112;
       const gap = 10;
-      const reservedFooter = 200;
+      const reservedFooter = 200 + (mostrarReq ? REQ_BLOCK_H : 0);
       const maxItems = Math.max(1, Math.floor((H - y - reservedFooter) / (itemH + gap)));
       planesFinanciados.slice(0, maxItems).forEach(pl => {
         if (pl.isPromo) {
@@ -1849,7 +2005,7 @@ async function cargarAccdbDesdeArchivo(file){
         }
         if (sub2) ctx.fillText(sub2, xLeft, y + 78);
         // Valor a la derecha
-        ctx.fillStyle = pl.isPromo ? '#EF8702' : '#005CA9';
+        ctx.fillStyle = pl.isPromo ? '#EF8702' : (pl.esDescuento ? '#107C10' : '#005CA9');
         ctx.font = 'bold 32px -apple-system,Segoe UI,Roboto,sans-serif';
         ctx.textAlign = 'right';
         const big = isContado ? fmt(pl.total) : fmt(pl.cuotaValor);
@@ -1866,7 +2022,25 @@ async function cargarAccdbDesdeArchivo(file){
         ctx.fillStyle = '#94a3b8';
         ctx.font = '15px -apple-system,Segoe UI,Roboto,sans-serif';
         ctx.fillText('+ ' + (planesFinanciados.length - maxItems) + ' planes más', PAD_X, y + 12);
+        y += 30;
       }
+    }
+
+    // ---- REQUISITOS DE CRÉDITO (opcional) ----
+    if (mostrarReq) {
+      const boxH = REQ_BLOCK_H - 20;
+      ctx.fillStyle = '#FFF8E5';
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 12); ctx.fill();
+      ctx.strokeStyle = '#F5E2A8'; ctx.lineWidth = 1;
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 12); ctx.stroke();
+      ctx.fillStyle = '#986F0B';
+      ctx.font = '700 13px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText('REQUISITOS DE CRÉDITO', PAD_X + 22, y + 26);
+      ctx.fillStyle = '#6B5300';
+      ctx.font = '14px -apple-system,Segoe UI,Roboto,sans-serif';
+      const reqTexto = 'La documentación varía según seas Responsable Inscripto, Monotributo, estés en relación de dependencia o tengas un negocio. Consultá con tu asesor M&A la documentación exacta para tu caso.';
+      wrapText(ctx, reqTexto, W - 2*PAD_X - 44).slice(0,3).forEach((l,i) => ctx.fillText(l, PAD_X + 22, y + 50 + i*20));
+      y += REQ_BLOCK_H;
     }
 
     drawFooter(ctx, W, H);
@@ -1907,7 +2081,7 @@ async function cargarAccdbDesdeArchivo(file){
       tag = 'PAGO CON TARJETA';
       titulo = pl.cuotas + ' cuotas de:';
       const marca = (pl.grupo || '').replace(/^Tarjeta\s*·?\s*/i, '').trim();
-      subtitulo = marca + (sinInteres ? ' · sin interés' : '');
+      subtitulo = marca + (pl.esDescuento ? ' · con descuento' : (sinInteres ? ' · sin interés' : ''));
       periodoLabel = 'por mes';
     }
     return { titulo, subtitulo, periodoLabel, tag };
@@ -2020,6 +2194,16 @@ async function cargarAccdbDesdeArchivo(file){
     }
   });
   $('#waLista').addEventListener('change', refreshAll);
+  $('#waListaContado').addEventListener('change', refreshAll);
+  if ($('#waOcultarAltoRecargo')) $('#waOcultarAltoRecargo').addEventListener('change', () => {
+    localStorage.setItem(OCULTAR_RECARGO_KEY, $('#waOcultarAltoRecargo').checked ? '1' : '0');
+    renderChecks();
+  });
+  if ($('#waUmbralRecargo')) $('#waUmbralRecargo').addEventListener('input', () => {
+    localStorage.setItem(UMBRAL_RECARGO_KEY, $('#waUmbralRecargo').value);
+    renderChecks();
+  });
+  if ($('#waMostrarRequisitos')) $('#waMostrarRequisitos').addEventListener('change', drawCanvas);
   $('#waTildarVisibles').addEventListener('click', () => {
     let visibles = planes.map((p,i) => ({pl:p, i:i}));
     if (filtroCat === 'favoritos') visibles = visibles.filter(x => isFavorito(x.pl.id));
