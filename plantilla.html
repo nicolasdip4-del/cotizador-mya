@@ -1940,36 +1940,19 @@ async function cargarAccdbDesdeArchivo(file){
 
     y += 12;
 
-    // ---- TOTAL CONTADO (solo si tieneContado) ----
+    // ---- PLANES ----
     const seleccionados = seleccionadosTmp;
     const tieneContado = tieneContadoTmp;
-    if (tieneContado) {
-      const contadoPlanSel = seleccionados.find(p => p && p.grupo === 'Contado');
-      const totalContado = contadoPlanSel ? contadoPlanSel.total : subtotal;
-      const boxH = 84;
-      ctx.fillStyle = '#f4f8fb';
-      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 14); ctx.fill();
-      ctx.strokeStyle = '#dbe6f0'; ctx.lineWidth = 1.5;
-      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 14); ctx.stroke();
-      ctx.fillStyle = '#5b7a94';
-      ctx.font = '700 13px -apple-system,Segoe UI,Roboto,sans-serif';
-      ctx.fillText('TOTAL CONTADO', PAD_X + 28, y + 30);
-      ctx.fillStyle = '#005CA9';
-      ctx.font = 'bold 36px -apple-system,Segoe UI,Roboto,sans-serif';
-      ctx.fillText(fmt(totalContado), PAD_X + 28, y + 66);
-      y += boxH + 24;
-    }
-
-    // ---- PLANES ----
     const planesFinanciados = seleccionados.filter(p => p && p.grupo !== 'Contado');
     const mostrarReq = $('#waMostrarRequisitos') && $('#waMostrarRequisitos').checked && planesFinanciados.length > 0;
     const REQ_BLOCK_H = 130;
+    const CONTADO_BOX_H = 108;
     if (planesFinanciados.length) {
       drawSectionTitle(ctx, tieneContado ? 'OPCIONES DE FINANCIACIÓN' : 'PLAN DE PAGO', PAD_X, y);
       y += 50;
       const itemH = 112;
       const gap = 10;
-      const reservedFooter = 200 + (mostrarReq ? REQ_BLOCK_H : 0);
+      const reservedFooter = 200 + (mostrarReq ? REQ_BLOCK_H : 0) + (tieneContado ? CONTADO_BOX_H : 0);
       const maxItems = Math.max(1, Math.floor((H - y - reservedFooter) / (itemH + gap)));
       planesFinanciados.slice(0, maxItems).forEach(pl => {
         if (pl.isPromo) {
@@ -2024,6 +2007,24 @@ async function cargarAccdbDesdeArchivo(file){
         ctx.fillText('+ ' + (planesFinanciados.length - maxItems) + ' planes más', PAD_X, y + 12);
         y += 30;
       }
+    }
+
+    // ---- TOTAL CONTADO (después de las opciones de financiación) ----
+    if (tieneContado) {
+      const contadoPlanSel = seleccionados.find(p => p && p.grupo === 'Contado');
+      const totalContado = contadoPlanSel ? contadoPlanSel.total : subtotal;
+      const boxH = 84;
+      ctx.fillStyle = '#f4f8fb';
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 14); ctx.fill();
+      ctx.strokeStyle = '#dbe6f0'; ctx.lineWidth = 1.5;
+      rrect(ctx, PAD_X, y, W - 2*PAD_X, boxH, 14); ctx.stroke();
+      ctx.fillStyle = '#5b7a94';
+      ctx.font = '700 13px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText('TOTAL CONTADO', PAD_X + 28, y + 30);
+      ctx.fillStyle = '#005CA9';
+      ctx.font = 'bold 36px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillText(fmt(totalContado), PAD_X + 28, y + 66);
+      y += boxH + 24;
     }
 
     // ---- REQUISITOS DE CRÉDITO (opcional) ----
