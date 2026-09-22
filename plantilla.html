@@ -271,7 +271,12 @@
               <label class="lbl">Solo con disponible</label>
               <select id="skStock"><option value="">Mostrar todos</option><option value="1">Sí</option></select>
             </div>
+            <div>
+              <label class="lbl">&nbsp;</label>
+              <button type="button" class="btn" id="skRefresh">🔄 Actualizar en vivo</button>
+            </div>
           </div>
+          <div class="muted" style="font-size:12px;margin-top:8px" id="skLiveMsg"></div>
         </div>
       </div>
       <div class="card">
@@ -556,11 +561,74 @@ $('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${
 })();
 
 /* ============== STOCK GLOBAL ============== */
+// CSV publico (Sheet compartido "cualquiera con el link, lector") del Sheet central de stock_sync.py.
+// Se usa solo para el boton "Actualizar en vivo": lee directo del Sheet sin pasar por rebuild/GitHub.
+const STOCK_CSV_URL = 'https://docs.google.com/spreadsheets/d/1IDstNIcIta3XLDiFFmdoxjCuARJwEKDSJi-oueq5Q8I/export?format=csv&gid=2115715284';
+
+function parseCSV(text){
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\r') { /* ignorar */ }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+async function refrescarStockEnVivo(){
+  const btn = $('#skRefresh'), msg = $('#skLiveMsg');
+  btn.disabled = true;
+  btn.textContent = '⏳ Actualizando...';
+  msg.textContent = '';
+  try {
+    const resp = await fetch(STOCK_CSV_URL + '&_ts=' + Date.now(), {cache: 'no-store'});
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const csv = await resp.text();
+    const rows = parseCSV(csv);
+    const header = rows[0];
+    const iArea = header.indexOf('nom_area'), iCod = header.indexOf('codalfa'),
+          iDet = header.indexOf('detalle'), iStk = header.indexOf('stock'),
+          iDisp = header.indexOf('Disponible Real');
+    if (iArea<0 || iCod<0 || iDisp<0) throw new Error('Columnas inesperadas en el Sheet');
+    const nuevo = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      if (!r || !r[iCod]) continue;
+      nuevo.push({a: (r[iArea]||'').trim(), c: r[iCod], d: r[iDet]||'', s: parseInt(r[iStk],10)||0, r: parseInt(r[iDisp],10)||0});
+    }
+    STOCK.length = 0;
+    nuevo.forEach(x => STOCK.push(x));
+    if (window.stockGlobalRebuild) window.stockGlobalRebuild();
+    const ahora = new Date().toLocaleTimeString('es-AR');
+    msg.textContent = `Actualizado en vivo a las ${ahora} (${nuevo.length.toLocaleString('es-AR')} filas).`;
+  } catch (e) {
+    msg.textContent = 'No se pudo actualizar en vivo: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 Actualizar en vivo';
+  }
+}
+
 (function buildStockGlobal(){
   if (!$('#skSucursal')) return;
-  const sucursales = [...new Set(STOCK.map(r => r.a).filter(Boolean))].sort();
-  $('#skSucursal').innerHTML = '<option value="">Todas</option>' + sucursales.map(s => `<option>${s}</option>`).join('');
   const inp = $('#skInput'), suc = $('#skSucursal'), st = $('#skStock'), out = $('#skResults'), cnt = $('#skCount');
+  function actualizarSucursales(){
+    const actual = suc.value;
+    const sucursales = [...new Set(STOCK.map(r => r.a).filter(Boolean))].sort();
+    suc.innerHTML = '<option value="">Todas</option>' + sucursales.map(s => `<option>${s}</option>`).join('');
+    if (sucursales.includes(actual)) suc.value = actual;
+  }
+  actualizarSucursales();
   let timer;
   function render(){
     const q = norm(inp.value).split(/\s+/).filter(Boolean);
@@ -589,6 +657,8 @@ $('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${
   }
   function deb(){ clearTimeout(timer); timer = setTimeout(render, 100); }
   [inp, suc, st].forEach(e => e.addEventListener('input', deb));
+  window.stockGlobalRebuild = function(){ actualizarSucursales(); render(); };
+  $('#skRefresh').addEventListener('click', refrescarStockEnVivo);
   render();
 })();
 
