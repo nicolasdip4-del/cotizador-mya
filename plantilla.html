@@ -63,7 +63,11 @@
   tbody tr:hover{background:#fbfcff}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   td.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
-  .scroll{max-height:520px;overflow:auto;border-radius:8px}
+  .scroll{max-height:min(520px, calc(100vh - 260px));overflow:auto;border-radius:8px;overscroll-behavior:contain}
+  th[data-sort]{cursor:pointer;user-select:none;white-space:nowrap}
+  th[data-sort]:hover{color:var(--ink)}
+  th[data-sort] .sort-ico{opacity:.4;font-size:10px;margin-left:3px}
+  th[data-sort].sort-active .sort-ico{opacity:1;color:var(--accent)}
 
   .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
   .badge.linea{background:#eaf0ff;color:#2c46d4}
@@ -630,6 +634,13 @@ async function refrescarStockEnVivo(){
   }
   actualizarSucursales();
   let timer;
+  const sortState = {key: null, dir: 1};
+  const SORT_LABELS = {a: 'Sucursal', c: 'Código', d: 'Detalle', r: 'Disponible real', s: 'Stock'};
+  function thSort(key, extraCls){
+    const active = sortState.key === key;
+    const ico = active ? (sortState.dir === 1 ? '▲' : '▼') : '▲';
+    return `<th data-sort="${key}"${extraCls?' class="'+extraCls+'"':''}${active?' class="'+(extraCls?extraCls+' ':'')+'sort-active"':''}>${SORT_LABELS[key]} <span class="sort-ico">${ico}</span></th>`;
+  }
   function render(){
     const q = norm(inp.value).split(/\s+/).filter(Boolean);
     const sucursal = suc.value;
@@ -643,6 +654,14 @@ async function refrescarStockEnVivo(){
       });
     }
     if (onlyDisp) res = res.filter(r => r.r > 0);
+    if (sortState.key) {
+      const k = sortState.key, dir = sortState.dir;
+      res = res.slice().sort((x, y) => {
+        const vx = x[k], vy = y[k];
+        const cmp = (typeof vx === 'number') ? (vx - vy) : String(vx).localeCompare(String(vy), 'es');
+        return cmp * dir;
+      });
+    }
     cnt.textContent = `${res.length.toLocaleString('es-AR')} resultados${res.length>500?' (mostrando primeros 500)':''}`;
     const view = res.slice(0, 500);
     if (!view.length) { out.innerHTML = '<div class="empty"><b>Sin resultados</b>Probá con otra búsqueda.</div>'; return; }
@@ -659,7 +678,8 @@ async function refrescarStockEnVivo(){
     }
     let html = '<table style="table-layout:fixed"><colgroup>' +
       '<col style="width:11%"><col style="width:15%"><col style="width:40%"><col style="width:17%"><col style="width:17%">' +
-      '</colgroup><thead><tr><th>Sucursal</th><th>Código</th><th>Detalle</th><th class="num">Disponible real</th><th class="num">Stock</th></tr></thead><tbody>';
+      '</colgroup><thead><tr>' + thSort('a') + thSort('c') + thSort('d') + thSort('r', 'num') + thSort('s', 'num') +
+      '</tr></thead><tbody>';
     view.forEach(r => {
       html += `<tr><td><span class="badge linea">${r.a}</span></td><td class="mono">${r.c}</td><td>${r.d||''}</td>` +
         `<td class="num"><span class="stock-pill" style="${colorDisp(r.r)}">${r.r}</span></td><td class="num">${r.s}</td></tr>`;
@@ -671,6 +691,14 @@ async function refrescarStockEnVivo(){
   [inp, suc, st].forEach(e => e.addEventListener('input', deb));
   window.stockGlobalRebuild = function(){ actualizarSucursales(); render(); };
   $('#skRefresh').addEventListener('click', refrescarStockEnVivo);
+  out.addEventListener('click', e => {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    const key = th.dataset.sort;
+    if (sortState.key === key) sortState.dir *= -1;
+    else { sortState.key = key; sortState.dir = 1; }
+    render();
+  });
   render();
 })();
 
