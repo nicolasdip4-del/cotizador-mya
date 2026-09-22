@@ -36,6 +36,12 @@ jobs:
           EXPECTED_SENDER: ${{ secrets.EXPECTED_SENDER }}
         run: python fetch_accdb.py
 
+      - name: Bajar stock global (todas las sucursales)
+        continue-on-error: true
+        env:
+          STOCKSYNC_CREDENTIALS_JSON: ${{ secrets.STOCKSYNC_CREDENTIALS_JSON }}
+        run: python fetch_stock.py
+
       - name: Regenerar index.html
         env:
           CI: 'true'

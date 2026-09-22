@@ -261,12 +261,29 @@ def cargar_logo_dataurl(directorio):
     return ''
 
 
+def cargar_stock_global(aqui):
+    ruta = os.path.join(aqui, 'stock_global.json')
+    if os.path.exists(ruta):
+        try:
+            with open(ruta, 'r', encoding='utf-8') as f:
+                stock = json.load(f)
+            print(f"  stock_global.json: {len(stock)} filas embebidas")
+            return stock
+        except Exception as e:
+            print(f"  AVISO: no se pudo leer stock_global.json ({e})")
+    else:
+        print("  (sin stock_global.json: tab Stock queda vacio)")
+    return []
+
+
 def generar_html(data, ruta_salida, dir_logo):
     aqui = os.path.dirname(os.path.abspath(__file__))
     plantilla = os.path.join(aqui, 'plantilla.html')
     with open(plantilla, 'r', encoding='utf-8') as f: html = f.read()
     html = html.replace('/*__DATA__*/null',
                         json.dumps(data, ensure_ascii=False, separators=(',', ':')))
+    html = html.replace('/*__STOCK__*/[]',
+                        json.dumps(cargar_stock_global(aqui), ensure_ascii=False, separators=(',', ':')))
     html = html.replace('/*__LOGO_DATAURL__*/', cargar_logo_dataurl(dir_logo))
     html = html.replace('/*__LOGO__*/', '')
     html = html.replace('/*__MDB_READER_SOURCE__*/""',

@@ -209,6 +209,7 @@
     <nav id="nav">
       <button data-view="buscador"><span class="ico">⌕</span> Buscador</button>
       <button data-view="comparador"><span class="ico">↔</span> Comparador</button>
+      <button data-view="stock"><span class="ico">🏬</span> Stock</button>
       <button data-view="whatsapp" class="active"><span class="ico">📋</span> Cotización <span id="navCartBadge" class="hidden" style="margin-left:auto;background:var(--orange);color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700"></span></button>
     </nav>
     <div class="meta" id="meta"></div>
@@ -250,6 +251,32 @@
       <div class="card">
         <div class="card-hd">Resultados <small id="qCount"></small></div>
         <div class="card-bd scroll" id="qResults"></div>
+      </div>
+    </section>
+
+    <!-- ============ STOCK GLOBAL ============ -->
+    <section id="view-stock" class="hidden">
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-bd">
+          <div class="row" style="align-items:flex-end">
+            <div style="flex:2;min-width:240px">
+              <label class="lbl">Buscar por código o descripción</label>
+              <input id="skInput" type="text" placeholder="ej. heladera, MT470, freezer..." autocomplete="off">
+            </div>
+            <div style="flex:1;min-width:180px">
+              <label class="lbl">Sucursal</label>
+              <select id="skSucursal"><option value="">Todas</option></select>
+            </div>
+            <div style="flex:1;min-width:180px">
+              <label class="lbl">Solo con disponible</label>
+              <select id="skStock"><option value="">Mostrar todos</option><option value="1">Sí</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd">Resultados <small id="skCount"></small></div>
+        <div class="card-bd scroll" id="skResults"></div>
       </div>
     </section>
 
@@ -428,6 +455,8 @@
 
 <script>
 const DATA = /*__DATA__*/null;
+// Stock global (todas las sucursales), generado por fetch_stock.py desde el Sheet central de stock_sync.py.
+const STOCK = /*__STOCK__*/[];
 // Data URL completa del logo (con mime correcto según extensión); o vacío si no hay logo.
 const LOGO_DATAURL_RAW = "/*__LOGO_DATAURL__*/";
 // Bundle ESM de mdb-reader@3 embebido por actualizar.py (vacío si no se pudo descargar).
@@ -523,6 +552,43 @@ $('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${
   }
   function deb(){ clearTimeout(timer); timer = setTimeout(render, 100); }
   [inp, ln, st].forEach(e => e.addEventListener('input', deb));
+  render();
+})();
+
+/* ============== STOCK GLOBAL ============== */
+(function buildStockGlobal(){
+  if (!$('#skSucursal')) return;
+  const sucursales = [...new Set(STOCK.map(r => r.a).filter(Boolean))].sort();
+  $('#skSucursal').innerHTML = '<option value="">Todas</option>' + sucursales.map(s => `<option>${s}</option>`).join('');
+  const inp = $('#skInput'), suc = $('#skSucursal'), st = $('#skStock'), out = $('#skResults'), cnt = $('#skCount');
+  let timer;
+  function render(){
+    const q = norm(inp.value).split(/\s+/).filter(Boolean);
+    const sucursal = suc.value;
+    const onlyDisp = st.value === '1';
+    let res = STOCK;
+    if (sucursal) res = res.filter(r => r.a === sucursal);
+    if (q.length) {
+      res = res.filter(r => {
+        const hay = norm(r.c + ' ' + (r.d||''));
+        return q.every(t => hay.includes(t));
+      });
+    }
+    if (onlyDisp) res = res.filter(r => r.r > 0);
+    cnt.textContent = `${res.length.toLocaleString('es-AR')} resultados${res.length>500?' (mostrando primeros 500)':''}`;
+    const view = res.slice(0, 500);
+    if (!view.length) { out.innerHTML = '<div class="empty"><b>Sin resultados</b>Probá con otra búsqueda.</div>'; return; }
+    let html = '<table><thead><tr><th>Sucursal</th><th>Código</th><th>Detalle</th><th class="num">Stock</th><th class="num">Disponible real</th></tr></thead><tbody>';
+    view.forEach(r => {
+      const cls = r.r<=0 ? (r.r<0?'neg':'zero') : '';
+      html += `<tr><td><span class="badge linea">${r.a}</span></td><td class="mono">${r.c}</td><td>${r.d||''}</td>` +
+        `<td class="num">${r.s}</td><td class="num"><span class="stock-pill ${cls}">${r.r}</span></td></tr>`;
+    });
+    html += '</tbody></table>';
+    out.innerHTML = html;
+  }
+  function deb(){ clearTimeout(timer); timer = setTimeout(render, 100); }
+  [inp, suc, st].forEach(e => e.addEventListener('input', deb));
   render();
 })();
 
