@@ -646,11 +646,23 @@ async function refrescarStockEnVivo(){
     cnt.textContent = `${res.length.toLocaleString('es-AR')} resultados${res.length>500?' (mostrando primeros 500)':''}`;
     const view = res.slice(0, 500);
     if (!view.length) { out.innerHTML = '<div class="empty"><b>Sin resultados</b>Probá con otra búsqueda.</div>'; return; }
-    let html = '<table><thead><tr><th>Sucursal</th><th>Código</th><th>Detalle</th><th class="num">Stock</th><th class="num">Disponible real</th></tr></thead><tbody>';
+    let minR = Infinity, maxR = -Infinity;
+    view.forEach(r => { if (r.r < minR) minR = r.r; if (r.r > maxR) maxR = r.r; });
+    function colorDisp(val){
+      // Ancla en 0: negativo siempre del lado rojo, positivo siempre del lado verde;
+      // la intensidad dentro de cada lado escala segun el min/max de la busqueda actual.
+      let t;
+      if (val >= 0) t = 0.5 + 0.5 * (maxR > 0 ? Math.min(1, val / maxR) : 0);
+      else t = 0.5 - 0.5 * (minR < 0 ? Math.min(1, val / minR) : 0);
+      const hue = t * 120; // 0 = rojo, 60 = amarillo (val=0), 120 = verde
+      return `background:hsl(${hue.toFixed(0)},70%,88%);color:hsl(${hue.toFixed(0)},65%,28%)`;
+    }
+    let html = '<table style="table-layout:fixed"><colgroup>' +
+      '<col style="width:11%"><col style="width:15%"><col style="width:40%"><col style="width:17%"><col style="width:17%">' +
+      '</colgroup><thead><tr><th>Sucursal</th><th>Código</th><th>Detalle</th><th class="num">Disponible real</th><th class="num">Stock</th></tr></thead><tbody>';
     view.forEach(r => {
-      const cls = r.r<=0 ? (r.r<0?'neg':'zero') : '';
       html += `<tr><td><span class="badge linea">${r.a}</span></td><td class="mono">${r.c}</td><td>${r.d||''}</td>` +
-        `<td class="num">${r.s}</td><td class="num"><span class="stock-pill ${cls}">${r.r}</span></td></tr>`;
+        `<td class="num"><span class="stock-pill" style="${colorDisp(r.r)}">${r.r}</span></td><td class="num">${r.s}</td></tr>`;
     });
     html += '</tbody></table>';
     out.innerHTML = html;
