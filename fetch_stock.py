@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Baja la hoja 'Stock' (central, todas las sucursales) del Sheet de stock_sync.py
-y aplica la logica de Disponible Real (stock - facturado - pendremi - auto_dep)
-para generar stock_global.json, que actualizar.py embebe en el cotizador."""
+"""Baja 'Hoja1' (central, todas las sucursales) del Sheet que escribe stock_sync.py
+en Oracle -- ya trae 'Disponible Real' calculada por ese mismo script -- y genera
+stock_global.json, que actualizar.py embebe en el cotizador."""
 import json
 import os
 import sys
@@ -10,7 +10,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 SHEET_ID = os.environ.get('STOCK_SHEET_ID', '1IDstNIcIta3XLDiFFmdoxjCuARJwEKDSJi-oueq5Q8I')
-WORKSHEET_NAME = 'Stock'
+WORKSHEET_NAME = 'Hoja1'
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
 
@@ -41,12 +41,9 @@ def main():
             continue
         try:
             stock = int(float(r.get('stock', 0) or 0))
-            facturado = int(float(r.get('facturado', 0) or 0))
-            pendremi = int(float(r.get('pendremi', 0) or 0))
-            auto_dep = int(float(r.get('auto_dep', 0) or 0))
+            disp_real = int(float(r.get('Disponible Real', 0) or 0))
         except (TypeError, ValueError):
             continue
-        disp_real = stock - facturado - pendremi - auto_dep
         suc = (r.get('nom_area', '') or '').strip()
         sucursales.add(suc)
         out.append({
