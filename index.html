@@ -6,6 +6,9 @@
 <title>Cotizador M&A</title>
 <script>window.IC={"search": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-3.5-3.5\"/>", "compare": "<path d=\"M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4\"/>", "box": "<path d=\"M21 8l-9-5-9 5 9 5 9-5z\"/><path d=\"M3 8v8l9 5 9-5V8M12 13v8\"/>", "quote": "<rect x=\"8\" y=\"3\" width=\"8\" height=\"4\" rx=\"1\"/><path d=\"M16 5h2a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2M9 12h6M9 16h4\"/>", "folder": "<path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z\"/>", "calendar": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M16 3v4M8 3v4M3 10h18\"/>", "refresh": "<path d=\"M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7\"/>", "trash": "<path d=\"M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3\"/>", "check": "<path d=\"M5 12l5 5 9-10\"/>", "x": "<path d=\"M6 6l12 12M18 6L6 18\"/>", "download": "<path d=\"M12 4v12M6 10l6 6 6-6M4 20h16\"/>", "copy": "<rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15V5a2 2 0 0 1 2-2h10\"/>", "camera": "<path d=\"M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z\"/><circle cx=\"12\" cy=\"13\" r=\"3.5\"/>", "warn": "<path d=\"M12 3l10 18H2L12 3z\"/><path d=\"M12 10v5M12 18h.01\"/>", "edit": "<path d=\"M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z\"/>", "star": "<path d=\"M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9L12 3z\"/>"};window.ic=function(k){return '<svg viewBox="0 0 24 24" aria-hidden="true">'+(window.IC[k]||'')+'</svg>'};</script>
 <style>
+  /* Gotham: tipografía de marca (misma que la web oficial) */
+  @font-face{font-family:'Gotham';src:url('fonts/gotham-regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'Gotham';src:url('fonts/gotham-bold.otf') format('opentype');font-weight:600 800;font-style:normal;font-display:swap}
   *,*::before,*::after{box-sizing:border-box}
   :root{
     /* tokens alineados a ~/projects/mya-design-system/DESIGN.md */
@@ -16,7 +19,7 @@
     --radius:10px; --shadow:none;
   }
   html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
+    font-family:"Gotham",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.45}
   button{font:inherit;color:inherit}
 
   .app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
@@ -367,7 +370,7 @@
               <div class="row">
                 <div style="flex:1;min-width:160px">
                   <label class="lbl" for="waCliente">Nombre del cliente</label>
-                  <input id="waCliente" type="text" placeholder="Nombre del cliente">
+                  <input id="waCliente" type="text" placeholder="Consumidor final">
                 </div>
                 <div style="flex:1;min-width:160px">
                   <label class="lbl" for="waCuitCliente">DNI / CUIT / CUIL</label>
@@ -1924,7 +1927,7 @@ async function cargarAccdbDesdeArchivo(file){
     ink: '#1A1A1A', soft: '#5F6368', faint: '#6B7075', line: '#E3E4E6', band: '#F6F7F9',
     brand: '#004F9E', brand7: '#002F60', orange: '#EF8702', orangeInk: '#8A4B00', orangeBg: '#FFF5E6', green: '#107C10',
   };
-  const FF = '-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
+  const FF = '"Gotham",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif';
   const fnt = (w, px) => w + ' ' + px + 'px ' + FF;
   function fitText(ctx, txt, maxW){
     if (ctx.measureText(txt).width <= maxW) return txt;
@@ -1997,7 +2000,7 @@ async function cargarAccdbDesdeArchivo(file){
     ctx.fillText('Cliente', PAD_X, y);
     ctx.textAlign = 'right'; ctx.fillText('Fecha de emisión', R, y); ctx.textAlign = 'left';
     ctx.fillStyle = FL.ink; ctx.font = fnt('700', 24);
-    ctx.fillText(fitText(ctx, cliente || 'A quien corresponda', W - 2 * PAD_X - 220), PAD_X, y + 30);
+    ctx.fillText(fitText(ctx, cliente || 'Consumidor final', W - 2 * PAD_X - 220), PAD_X, y + 30);
     ctx.textAlign = 'right'; ctx.font = fnt('700', 18); ctx.fillText(hoyDMY(), R, y + 28); ctx.textAlign = 'left';
     if (dniCuit) { ctx.fillStyle = FL.soft; ctx.font = fnt('400', 15); ctx.fillText('DNI / CUIT ' + dniCuit, PAD_X, y + 54); }
     y += dniCuit ? 110 : 88;
@@ -2237,6 +2240,10 @@ async function cargarAccdbDesdeArchivo(file){
   }
   // Exponer drawCanvas global por compatibilidad
   window.drawCanvas = drawCanvas;
+  if (document.fonts && document.fonts.load) {
+    Promise.all([document.fonts.load('400 16px "Gotham"'), document.fonts.load('700 16px "Gotham"')])
+      .then(() => { try { drawCanvas(); } catch (e) {} });
+  }
 
   // ---- REFRESH ALL ----
   function refreshAll(){
