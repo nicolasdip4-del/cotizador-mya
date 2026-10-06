@@ -2017,7 +2017,9 @@ async function cargarAccdbDesdeArchivo(file){
     const seleccionados = Array.from(seleccion).map(i => planes[i]).filter(Boolean);
     const tieneContado = seleccionados.some(p => p.grupo === 'Contado');
     const haySinRecargo = seleccionados.some(p => p.cuotas > 1 && p.recargoPct <= 0.5);
-    const ocultarPrecioProducto = !tieneContado && seleccionados.length > 0 && !haySinRecargo;
+    // Con un plan con interés elegido, el cliente no ve el precio de lista (pedido de Nicolas 2026-10-06)
+    const hayConInteres = seleccionados.some(p => p.grupo !== 'Contado' && p.recargoPct > 0.5);
+    const ocultarPrecioProducto = hayConInteres || (!tieneContado && seleccionados.length > 0 && !haySinRecargo);
 
     // ---- Tabla de productos ----
     const numProds = window.cotItems.length;
@@ -2080,12 +2082,14 @@ async function cargarAccdbDesdeArchivo(file){
 
     // ---- Totales (a la derecha, como en un presupuesto) ----
     const contadoPlanSel = seleccionados.find(p => p && p.grupo === 'Contado');
-    if (!ocultarPrecioProducto) {
+    if (!ocultarPrecioProducto || tieneContado) {
       const boxL = R - 420;
       y += 30;
-      ctx.fillStyle = FL.soft; ctx.font = fnt('400', 15);
-      ctx.fillText('Subtotal de lista', boxL, y);
-      ctx.textAlign = 'right'; ctx.fillText(fmt(subtotal), R, y); ctx.textAlign = 'left';
+      if (!ocultarPrecioProducto) {
+        ctx.fillStyle = FL.soft; ctx.font = fnt('400', 15);
+        ctx.fillText('Subtotal de lista', boxL, y);
+        ctx.textAlign = 'right'; ctx.fillText(fmt(subtotal), R, y); ctx.textAlign = 'left';
+      }
       if (tieneContado) {
         y += 16;
         ctx.fillStyle = FL.band; ctx.fillRect(boxL - 16, y, R - boxL + 16, 70);
