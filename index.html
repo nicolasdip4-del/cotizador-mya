@@ -530,6 +530,8 @@ $('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${
 
 
 /* ============== BUSCADOR ============== */
+// Listas visibles en el buscador (el resto sigue disponible en Cotización y Comparador)
+const BUSCADOR_LISTAS = [1000, 3767];
 (function buildBuscador(){
   $('#qLinea').innerHTML = '<option value="">Todas</option>' + LINEAS.map(l => `<option>${l}</option>`).join('');
   const inp = $('#qInput'), ln = $('#qLinea'), st = $('#qStock'), out = $('#qResults'), cnt = $('#qCount');
@@ -538,7 +540,7 @@ $('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${
     const q = norm(inp.value).split(/\s+/).filter(Boolean);
     const linea = ln.value;
     const onlyStock = st.value === '1';
-    let res = DATA.productos;
+    let res = DATA.productos.filter(p => BUSCADOR_LISTAS.some(c => p.precios[c]));
     if (linea) res = res.filter(p => p.linea === linea);
     if (q.length) {
       res = res.filter(p => {
@@ -546,11 +548,11 @@ $('#meta').innerHTML = `Origen:<br><b>${DATA.archivo_origen}</b><br>Generado: ${
         return q.every(t => hay.includes(t));
       });
     }
-    if (onlyStock) res = res.filter(p => Object.values(p.precios).some(x => x.s > 0));
+    if (onlyStock) res = res.filter(p => BUSCADOR_LISTAS.some(c => p.precios[c] && p.precios[c].s > 0));
     res = res.slice(0, 200);
     cnt.textContent = `${res.length} resultados${res.length===200?' (mostrando primeros 200)':''}`;
     if (!res.length) { out.innerHTML = '<div class="empty"><b>Sin resultados</b>Probá con otra búsqueda.</div>'; return; }
-    const codsOrden = [...DATA.listas].sort((a,b)=>a.cod-b.cod).map(l => l.cod);
+    const codsOrden = BUSCADOR_LISTAS.filter(c => LISTAS[c]);
     let html = '<table><thead><tr><th>Código</th><th>Detalle</th><th>Línea</th>';
     codsOrden.forEach(c => { html += `<th class="num" title="${LISTAS[c].nombre}">L.${c}</th>`; });
     html += '</tr></thead><tbody>';
